@@ -339,7 +339,9 @@ namespace Krane.UIAExtras
         {
             if (pendingItem != null || player == null || selectedItem == null || !ShowItemsDuringUse.Value) return true;
             if (player.ProcessStatus != Player.EProcessStatus.Scheduled) return true;
-            if (player.InventoryController == null || player.InventoryController.IsChangingWeapon) return true;
+            // No IsChangingWeapon check: a selection made while hands are still switching is exactly what
+            // the scheduled slot is for (SetItemInHands rejects it and the selection would be lost).
+            if (player.InventoryController == null) return true;
             if (player.IsInBufferZone && !player.CanManipulateWithHandsInBufferZone) return true;
             if (!CheckActionDuringUse(selectedItem, null).Succeeded) return true;
             player.TryProceed(selectedItem, IgnoreHandsResult, true);
