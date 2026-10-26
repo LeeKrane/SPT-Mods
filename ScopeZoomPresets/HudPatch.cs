@@ -8,7 +8,7 @@ namespace Krane.ScopeZoomPresets
 {
     // Vanilla shows "xN" on the optic panel only when an adjustable scope sits exactly on a native edge
     // and hides it in between. For adjustable scopes, that handler is skipped (HudSuppressPatch) and the
-    // label is shown instead: once per hotkey press, and on scroll whenever the rounded percent changes.
+    // label is shown instead: once per hotkey press, and on scroll whenever the zoom, rounded to 0.1x, changes.
     // Only for the local player's current sight, and only while its variable sub-scope is selected.
     internal static class HudPatch
     {
@@ -85,7 +85,7 @@ namespace Krane.ScopeZoomPresets
 
         // Only reached on a frame where the FOV changed (scroll glide) or on a toggle, for a registered
         // (handler, sight) pair: the sight was validated adjustable in LocalHandlers.Set, so MinFov/MaxFov
-        // are safe to read. The stored percent follows the handler even while its sight is not the current
+        // are safe to read. The stored zoom follows the handler even while its sight is not the current
         // one, so switching back to a changed sight does not draw.
         private static void Update(LocalHandlers.Entry entry, ScopeZoomHandler handler, SightComponent sight, bool force)
         {
@@ -94,18 +94,19 @@ namespace Krane.ScopeZoomPresets
                 if (_screen == null)
                     return;
 
-                // Vanilla's own percent: InverseLerp(MinFov, MaxFov, _filedOfView) (ScopeZoomHandler.cs:402-405).
-                float fov = handler.FiledOfView;
-                int percent = (int)Math.Round(handler.ZoomFactor() * 100f);
-                int previous = entry.Percent;
-                entry.Percent = percent;
-                if (!force && percent == previous)
+                if (!ScopeSight.TryLabels(sight, out float minZoom, out float maxZoom))
+                    return;
+                float zoom = ZoomMath.FovToZoom(handler.FiledOfView, minZoom, maxZoom, handler.MinFov, handler.MaxFov);
+                int tenths = ZoomMath.ToTenths(zoom);
+                int previous = entry.Tenths;
+                entry.Tenths = tenths;
+                if (!force && tenths == previous)
                     return;
 
                 if (!Applies(sight))
                     return;
 
-                Draw(_screen, sight, percent, fov, handler.MinFov);
+                Draw(_screen, tenths);
             }
             catch (Exception e)
             {
@@ -113,13 +114,9 @@ namespace Krane.ScopeZoomPresets
             }
         }
 
-        private static void Draw(BattleUIScreen<EftBattleUIScreen.EftBattleUIScreenController, EEftScreenType> screen,
-            SightComponent sight, int percent, float fov, float minFov)
+        private static void Draw(BattleUIScreen<EftBattleUIScreen.EftBattleUIScreenController, EEftScreenType> screen, int tenths)
         {
-            // Applies guaranteed a selected variable entry, so VariableEntry is that non-empty entry.
-            float minZoom = GroupKeys.MinLabel(ScopeSight.VariableEntry(sight));
-            float zoom = ZoomMath.ApproxZoom(fov, minFov, minZoom);
-            screen._opticCratePanel.Show(ZoomMath.FormatLabel(percent, zoom));
+            screen._opticCratePanel.Show(ZoomMath.FormatZoom(tenths));
             screen.HideRaidTime();
         }
     }

@@ -24,9 +24,11 @@ namespace Krane.ScopeZoomPresets
                 if (group == null)
                     return true;
 
-                group.Percents(out float loPercent, out float hiPercent);
-                float lo = ZoomMath.PercentToFov(loPercent, __instance.MinFov, __instance.MaxFov);
-                float hi = ZoomMath.PercentToFov(hiPercent, __instance.MinFov, __instance.MaxFov);
+                if (!ScopeSight.TryLabels(____sightComponent, out float minZoom, out float maxZoom))
+                    return true;
+                group.Points(out float loZoom, out float hiZoom);
+                float lo = ZoomMath.ZoomToFov(loZoom, minZoom, maxZoom, __instance.MinFov, __instance.MaxFov);
+                float hi = ZoomMath.ZoomToFov(hiZoom, minZoom, maxZoom, __instance.MinFov, __instance.MaxFov);
                 float target = ZoomMath.ToggleTarget(____filedOfView, lo, hi);
                 // method_4 maps float_4 through the FOV curve, which only vanilla's edge values survive.
                 // Everything that can throw is computed before the first field write.

@@ -6,14 +6,14 @@ namespace Krane.ScopeZoomPresets
     internal sealed class GroupSettings
     {
         public ConfigEntry<bool> Enabled;
-        public ConfigEntry<int> MinPercent;
-        public ConfigEntry<int> MaxPercent;
+        public ConfigEntry<float> MinZoom;
+        public ConfigEntry<float> MaxZoom;
 
-        // Min above Max is allowed in the config; the two are swapped here.
-        public void Percents(out float lo, out float hi)
+        // Min above Max is allowed in the config; the two are swapped here. Values are snapped to 0.1x.
+        public void Points(out float lo, out float hi)
         {
-            lo = MinPercent.Value;
-            hi = MaxPercent.Value;
+            lo = ZoomMath.SnapZoom(MinZoom.Value);
+            hi = ZoomMath.SnapZoom(MaxZoom.Value);
             ZoomMath.Order(ref lo, ref hi);
         }
     }
@@ -24,20 +24,34 @@ namespace Krane.ScopeZoomPresets
 
         public static void Bind(ConfigFile config)
         {
-            var percent = new AcceptableValueRange<int>(0, 100);
             foreach (var range in GroupKeys.Ranges)
             {
                 string section = GroupKeys.Name(range.Min, range.Max);
+                var zoom = new AcceptableValueRange<float>(range.Min, range.Max);
                 Groups[section] = new GroupSettings
                 {
                     Enabled = config.Bind(section, "Enabled", false,
-                        "Use this group's toggle points and start its scopes at the lower of Min % and Max % at raid start."),
-                    MinPercent = config.Bind(section, "Min %", 0, new ConfigDescription(
-                        "Low-zoom toggle point. 0% is the scope's native lowest zoom.", percent)),
-                    MaxPercent = config.Bind(section, "Max %", 100, new ConfigDescription(
-                        "High-zoom toggle point. 100% is the scope's native highest zoom.", percent)),
+                        "Use this group's toggle points and start its scopes at the lower of Min zoom and Max zoom at raid start."),
+                    MinZoom = config.Bind(section, "Min zoom", range.Min, new ConfigDescription(
+                        "Low-zoom toggle point in x magnification.", zoom)),
+                    MaxZoom = config.Bind(section, "Max zoom", range.Max, new ConfigDescription(
+                        "High-zoom toggle point in x magnification.", zoom)),
                 };
+                Snap(Groups[section].MinZoom);
+                Snap(Groups[section].MaxZoom);
             }
+        }
+
+        // Keeps the stored value on the 0.1 grid. The reassignment fires SettingChanged once more, which then
+        // finds the value already snapped.
+        private static void Snap(ConfigEntry<float> entry)
+        {
+            entry.SettingChanged += (_, __) =>
+            {
+                float snapped = ZoomMath.SnapZoom(entry.Value);
+                if (snapped != entry.Value)
+                    entry.Value = snapped;
+            };
         }
 
         public static GroupSettings Get(string key)

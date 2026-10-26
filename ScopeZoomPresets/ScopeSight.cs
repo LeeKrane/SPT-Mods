@@ -17,6 +17,20 @@ namespace Krane.ScopeZoomPresets
             return GroupKeys.VariableEntry(sight?._template?.Zooms, sight?.SelectedScope ?? -1);
         }
 
+        // Label range of the variable entry the handler drives; false when the sight has none.
+        public static bool TryLabels(SightComponent sight, out float minZoom, out float maxZoom)
+        {
+            float[] entry = VariableEntry(sight);
+            if (entry == null || entry.Length == 0)
+            {
+                minZoom = maxZoom = 0f;
+                return false;
+            }
+            minZoom = GroupKeys.MinLabel(entry);
+            maxZoom = GroupKeys.MaxLabel(entry);
+            return true;
+        }
+
         // False while a fixed backup sub-scope (e.g. the ADO's 1x) is selected.
         public static bool IsVariableSelected(SightComponent sight)
         {

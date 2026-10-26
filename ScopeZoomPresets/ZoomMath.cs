@@ -4,32 +4,47 @@ using System.Globalization;
 namespace Krane.ScopeZoomPresets
 {
     // FOV math for adjustable optics. minFov is MinMaxFov.x (widest FOV, lowest zoom), maxFov is
-    // MinMaxFov.y (narrowest FOV, highest zoom). Percent is linear in FOV, like the game's ZoomFactor.
+    // MinMaxFov.y (narrowest FOV, highest zoom). The game has no magnification formula for in-between
+    // zooms; this models it as a log-space interpolation of the half-angle tangent between the two native
+    // edges, so both edges are exact (they map to the scope's labels) and in-between values follow optics.
     internal static class ZoomMath
     {
-        public static float PercentToFov(float percent, float minFov, float maxFov)
+        // Exact inverse of FovToZoom. Zooms at or beyond a label map to the native edge FOV.
+        public static float ZoomToFov(float zoom, float minZoom, float maxZoom, float minFov, float maxFov)
         {
-            if (percent <= 0f)
+            if (!(maxZoom > minZoom) || !(zoom > minZoom))
                 return minFov;
-            if (percent >= 100f)
+            if (zoom >= maxZoom)
                 return maxFov;
-            float t = percent / 100f;
-            return minFov + (maxFov - minFov) * t;
+            double k = Math.Log(zoom / minZoom) / Math.Log(maxZoom / minZoom);
+            double tanMin = Math.Tan(minFov * Math.PI / 360.0);
+            double tanMax = Math.Tan(maxFov * Math.PI / 360.0);
+            double tanHalf = tanMin * Math.Pow(tanMax / tanMin, k);
+            float fov = (float)(2.0 * Math.Atan(tanHalf) * 180.0 / Math.PI);
+            return Math.Max(maxFov, Math.Min(minFov, fov));
         }
 
-        public static float FovToPercent(float fov, float minFov, float maxFov)
+        public static float FovToZoom(float fov, float minZoom, float maxZoom, float minFov, float maxFov)
         {
-            if (minFov == maxFov)
-                return 0f;
-            float t = (fov - minFov) / (maxFov - minFov);
-            return Math.Max(0f, Math.Min(1f, t)) * 100f;
+            if (!(maxZoom > minZoom) || fov >= minFov)
+                return minZoom;
+            if (fov <= maxFov)
+                return maxZoom;
+            double tanMin = Math.Tan(minFov * Math.PI / 360.0);
+            double tanMax = Math.Tan(maxFov * Math.PI / 360.0);
+            double tanFov = Math.Tan(fov * Math.PI / 360.0);
+            double k = Math.Log(tanMin / tanFov) / Math.Log(tanMin / tanMax);
+            return (float)(minZoom * Math.Pow(maxZoom / minZoom, k));
         }
 
-        // The game has no magnification formula; this scales the low label by the ratio of the
-        // half-angle tangents, so it is only an approximation.
-        public static float ApproxZoom(float fov, float minFov, float minZoom)
+        public static float SnapZoom(float zoom)
         {
-            return (float)(minZoom * Math.Tan(minFov * Math.PI / 360.0) / Math.Tan(fov * Math.PI / 360.0));
+            return (float)(Math.Round(zoom * 10.0, MidpointRounding.AwayFromZero) / 10.0);
+        }
+
+        public static int ToTenths(float zoom)
+        {
+            return (int)Math.Round(zoom * 10.0, MidpointRounding.AwayFromZero);
         }
 
         // Same rule as vanilla ForceChangeScopeState: jump to the point farther away, tie goes to hi.
@@ -110,27 +125,20 @@ namespace Krane.ScopeZoomPresets
                 (lo, hi) = (hi, lo);
         }
 
-        // "N% · ~" for 0..100, built once: the label path then only formats the zoom and concatenates.
-        private static readonly string[] LabelPrefixes = BuildPrefixes();
+        // "N.Nx" strings by tenths, built on first use: the HUD path then allocates only for a zoom it has
+        // not shown before.
+        private static readonly string[] ZoomLabels = new string[1001];
 
-        private static string[] BuildPrefixes()
+        public static string FormatZoom(int tenths)
         {
-            var prefixes = new string[101];
-            for (int i = 0; i < prefixes.Length; i++)
-                prefixes[i] = Prefix(i);
-            return prefixes;
+            if (tenths < 0 || tenths >= ZoomLabels.Length)
+                return Build(tenths);
+            return ZoomLabels[tenths] ?? (ZoomLabels[tenths] = Build(tenths));
         }
 
-        private static string Prefix(int percent)
+        private static string Build(int tenths)
         {
-            return percent.ToString(CultureInfo.InvariantCulture) + "% · ~";
-        }
-
-        // Plain string concatenation, no boxing or interpolation handler.
-        public static string FormatLabel(int percent, float zoom)
-        {
-            string prefix = percent >= 0 && percent < LabelPrefixes.Length ? LabelPrefixes[percent] : Prefix(percent);
-            return prefix + zoom.ToString("0.0", CultureInfo.InvariantCulture) + "x";
+            return (tenths / 10).ToString(CultureInfo.InvariantCulture) + "." + (Math.Abs(tenths) % 10).ToString(CultureInfo.InvariantCulture) + "x";
         }
     }
 }

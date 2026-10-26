@@ -8,7 +8,7 @@ using HarmonyLib;
 namespace Krane.ScopeZoomPresets
 {
     // At raid start, set every adjustable scope of the local player's equipment that is in an enabled
-    // group to the lower of its Min % and Max % points. ScopeZoomHandler.Init reads ScopeZoomValue when the weapon visuals are
+    // group to the lower of its Min zoom and Max zoom points. ScopeZoomHandler.Init reads ScopeZoomValue when the weapon visuals are
     // built; for a weapon already in hands, Init is run again so the live handler picks it up.
     [HarmonyPatch(typeof(GameWorld), nameof(GameWorld.OnGameStarted))]
     internal static class RaidStartPatch
@@ -44,9 +44,11 @@ namespace Krane.ScopeZoomPresets
                     GroupSettings group = ScopeSight.EnabledGroup(sight);
                     if (group == null)
                         continue;
-                    group.Percents(out float lo, out _);
+                    if (!ScopeSight.TryLabels(sight, out float minZoom, out float maxZoom))
+                        continue;
+                    group.Points(out float lo, out _);
                     var fov = sight.AdjustableOpticData.MinMaxFov;
-                    sight.ScopeZoomValue = ZoomMath.PercentToFov(lo, fov.x, fov.y);
+                    sight.ScopeZoomValue = ZoomMath.ZoomToFov(lo, minZoom, maxZoom, fov.x, fov.y);
                 }
 
                 if (firearm?.Firearms != null)

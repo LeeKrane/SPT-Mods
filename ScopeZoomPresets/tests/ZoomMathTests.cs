@@ -7,52 +7,99 @@ public class ZoomMathTests
     private const float Wide = 26.5f;
     private const float Narrow = 4.4167f;
 
+    // 1x-6x Razor: wide FOV = 1x, narrow FOV = 6x.
     [Fact]
-    public void PercentToFov_Edges()
+    public void ZoomToFov_EdgesAreExact()
     {
-        Assert.Equal(Wide, ZoomMath.PercentToFov(0, Wide, Narrow), 3);
-        Assert.Equal(Narrow, ZoomMath.PercentToFov(100, Wide, Narrow), 3);
-        Assert.Equal((Wide + Narrow) / 2, ZoomMath.PercentToFov(50, Wide, Narrow), 3);
+        Assert.Equal(Wide, ZoomMath.ZoomToFov(1f, 1f, 6f, Wide, Narrow));
+        Assert.Equal(Narrow, ZoomMath.ZoomToFov(6f, 1f, 6f, Wide, Narrow));
     }
 
     [Fact]
-    public void PercentToFov_ClampsOutOfRange()
+    public void ZoomToFov_ClampsOutsideRange()
     {
-        Assert.Equal(Narrow, ZoomMath.PercentToFov(150, Wide, Narrow), 3);
-        Assert.Equal(Wide, ZoomMath.PercentToFov(-10, Wide, Narrow), 3);
+        Assert.Equal(Wide, ZoomMath.ZoomToFov(0.2f, 1f, 6f, Wide, Narrow));
+        Assert.Equal(Narrow, ZoomMath.ZoomToFov(9f, 1f, 6f, Wide, Narrow));
     }
 
     [Fact]
-    public void FovToPercent_InvertsPercentToFov()
+    public void ZoomToFov_InBetweenIsStrictlyBetweenAndDecreasing()
     {
-        float fov = ZoomMath.PercentToFov(70, Wide, Narrow);
-        Assert.Equal(70, ZoomMath.FovToPercent(fov, Wide, Narrow), 3);
+        float a = ZoomMath.ZoomToFov(2f, 1f, 6f, Wide, Narrow);
+        float b = ZoomMath.ZoomToFov(4f, 1f, 6f, Wide, Narrow);
+        Assert.InRange(a, Narrow + 0.001f, Wide - 0.001f);
+        Assert.InRange(b, Narrow + 0.001f, Wide - 0.001f);
+        Assert.True(b < a);
+    }
+
+    [Theory]
+    [InlineData(1.5f)]
+    [InlineData(2.0f)]
+    [InlineData(3.3f)]
+    [InlineData(5.9f)]
+    public void FovToZoom_InvertsZoomToFov(float zoom)
+    {
+        float fov = ZoomMath.ZoomToFov(zoom, 1f, 6f, Wide, Narrow);
+        Assert.Equal(zoom, ZoomMath.FovToZoom(fov, 1f, 6f, Wide, Narrow), 3);
     }
 
     [Fact]
-    public void FovToPercent_ZeroRangeIsZero()
+    public void FovToZoom_EdgesAreExactLabels()
     {
-        Assert.Equal(0, ZoomMath.FovToPercent(10, 10, 10));
+        Assert.Equal(2.5f, ZoomMath.FovToZoom(Wide, 2.5f, 8f, Wide, Narrow));
+        Assert.Equal(8f, ZoomMath.FovToZoom(Narrow, 2.5f, 8f, Wide, Narrow));
+        Assert.Equal(2.5f, ZoomMath.FovToZoom(Wide + 3f, 2.5f, 8f, Wide, Narrow));
+        Assert.Equal(8f, ZoomMath.FovToZoom(Narrow - 1f, 2.5f, 8f, Wide, Narrow));
     }
 
     [Fact]
-    public void ApproxZoom_AtWideEdgeIsMinZoom()
+    public void ZoomToFov_DegenerateRangeReturnsWide()
     {
-        Assert.Equal(1f, ZoomMath.ApproxZoom(Wide, Wide, 1f), 3);
+        Assert.Equal(Wide, ZoomMath.ZoomToFov(3f, 4f, 4f, Wide, Narrow));
+        Assert.Equal(4f, ZoomMath.FovToZoom(10f, 4f, 4f, Wide, Narrow));
+    }
+
+    [Theory]
+    [InlineData(1.04f, 1.0f)]
+    [InlineData(1.06f, 1.1f)]
+    [InlineData(4.24f, 4.2f)]
+    public void SnapZoom_RoundsToTenths(float input, float expected)
+    {
+        Assert.Equal(expected, ZoomMath.SnapZoom(input), 3);
     }
 
     [Fact]
-    public void ApproxZoom_AtNarrowEdgeNearLabel()
+    public void ToTenths_Rounds()
     {
-        float zoom = ZoomMath.ApproxZoom(Narrow, Wide, 1f);
-        Assert.InRange(zoom, 5.5f, 6.5f);
+        Assert.Equal(42, ZoomMath.ToTenths(4.24f));
+        Assert.Equal(60, ZoomMath.ToTenths(6f));
+    }
+
+    [Fact]
+    public void FormatZoom_OneDecimalAndX()
+    {
+        Assert.Equal("4.2x", ZoomMath.FormatZoom(42));
+        Assert.Equal("1.0x", ZoomMath.FormatZoom(10));
+        Assert.Equal("35.0x", ZoomMath.FormatZoom(350));
+        Assert.Equal("0.5x", ZoomMath.FormatZoom(5));
+        Assert.Equal("1234.5x", ZoomMath.FormatZoom(12345));
+        Assert.Same(ZoomMath.FormatZoom(42), ZoomMath.FormatZoom(42));
+    }
+
+    [Fact]
+    public void Order_SwapsZoomPoints()
+    {
+        float lo = 4.5f, hi = 2f;
+        ZoomMath.Order(ref lo, ref hi);
+        Assert.Equal(2f, lo);
+        Assert.Equal(4.5f, hi);
     }
 
     [Fact]
     public void ToggleTarget_GoesToFartherPoint()
     {
-        float lo = ZoomMath.PercentToFov(15, Wide, Narrow);
-        float hi = ZoomMath.PercentToFov(70, Wide, Narrow);
+        float lo = ZoomMath.ZoomToFov(1.5f, 1f, 6f, Wide, Narrow);
+        float hi = ZoomMath.ZoomToFov(4.2f, 1f, 6f, Wide, Narrow);
         Assert.Equal(hi, ZoomMath.ToggleTarget(lo, lo, hi));
         Assert.Equal(lo, ZoomMath.ToggleTarget(hi, lo, hi));
         // Close to hi: farther is lo.
@@ -69,24 +116,6 @@ public class ZoomMathTests
     public void ToggleTarget_EqualPointsReturnsThatPoint()
     {
         Assert.Equal(12f, ZoomMath.ToggleTarget(20f, 12f, 12f));
-    }
-
-    [Fact]
-    public void Order_SwapsWhenLoAboveHi()
-    {
-        float lo = 80, hi = 20;
-        ZoomMath.Order(ref lo, ref hi);
-        Assert.Equal(20, lo);
-        Assert.Equal(80, hi);
-    }
-
-    [Fact]
-    public void FormatLabel_PercentAndZoom()
-    {
-        Assert.Equal("70% · ~4.2x", ZoomMath.FormatLabel(70, 4.24f));
-        Assert.Equal("0% · ~1.0x", ZoomMath.FormatLabel(0, 1f));
-        Assert.Equal("100% · ~6.0x", ZoomMath.FormatLabel(100, 6f));
-        Assert.Equal("101% · ~6.0x", ZoomMath.FormatLabel(101, 6f));
     }
 
     [Fact]
@@ -115,7 +144,7 @@ public class ZoomMathTests
     public void CurveInputFov_MapsBackToTarget()
     {
         System.Func<float, float> curve = t => t * t;
-        float target = ZoomMath.PercentToFov(25, Wide, Narrow);
+        float target = ZoomMath.ZoomToFov(2f, 1f, 6f, Wide, Narrow);
         float input = ZoomMath.CurveInputFov(target, Wide, Narrow, curve);
         // Replays method_4: float_2 = |range| * curve(InverseLerp(Max, Min, input)) + Max.
         float ratio = (input - Narrow) / (Wide - Narrow);
@@ -144,15 +173,6 @@ public class ZoomMathTests
         Assert.True(ZoomMath.IsSupportedRange(23.4f, 1.37f));
         Assert.False(ZoomMath.IsSupportedRange(5f, 20f));
         Assert.False(ZoomMath.IsSupportedRange(10f, 10f));
-    }
-
-    [Fact]
-    public void PercentToFov_EdgesAreExact()
-    {
-        Assert.Equal(23.4f, ZoomMath.PercentToFov(0, 23.4f, 1.37f));
-        Assert.Equal(1.37f, ZoomMath.PercentToFov(100, 23.4f, 1.37f));
-        Assert.Equal(23.4f, ZoomMath.PercentToFov(-5, 23.4f, 1.37f));
-        Assert.Equal(1.37f, ZoomMath.PercentToFov(250, 23.4f, 1.37f));
     }
 
     [Fact]

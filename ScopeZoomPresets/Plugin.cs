@@ -2,7 +2,7 @@
 //
 // The magnification hotkey ends in ScopeZoomHandler.ForceChangeScopeState, which jumps to whichever
 // native FOV edge is farther from the current one. TogglePatch keeps that rule but uses the group's
-// Min % / Max % points. Percent is linear in FOV between MinMaxFov.x (0%) and MinMaxFov.y (100%).
+// Min zoom / Max zoom points (x magnification, 0.1 steps), mapped to FOV between MinMaxFov.x (the low label) and MinMaxFov.y (the high label).
 // Zoom is stored as FOV in SightComponent.ScopeZoomValue, ordinary item state that Fika syncs like
 // vanilla; values always stay inside the scope's native FOV range. The toggle and the HUD label are
 // local only: their patches gate on the local player's sights.
@@ -24,7 +24,7 @@ namespace Krane.ScopeZoomPresets
         {
             Log = Logger;
             ShowLabel = Config.Bind("HUD", "Show zoom label", true,
-                "Show percent and approximate zoom on each hotkey press and on scroll whenever the rounded percent changes, for the sight currently selected on your weapon. Off: vanilla label.");
+                "Show the zoom as N.Nx on each hotkey press and on scroll whenever the rounded zoom changes, for the sight currently selected on your weapon. Off: vanilla label.");
             ShowLabel.SettingChanged += (_, __) => RefreshLabel();
             GroupConfig.Bind(Config);
 

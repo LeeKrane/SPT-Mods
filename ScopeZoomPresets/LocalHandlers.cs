@@ -25,8 +25,8 @@ namespace Krane.ScopeZoomPresets
             public readonly Func<float, float> Curve;
             // False when the curve is not a usable 0..1 monotonic map: float_4 stays vanilla, the toggle too.
             public readonly bool CurveValid;
-            // Last percent the HUD handled. -1: none yet.
-            public int Percent = -1;
+            // Last zoom (in tenths) the HUD handled. -1: none yet.
+            public int Tenths = -1;
 
             public Entry(ScopeZoomHandler handler, SightComponent sight)
             {
