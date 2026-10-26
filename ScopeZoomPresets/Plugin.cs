@@ -29,6 +29,7 @@ namespace Krane.ScopeZoomPresets
             var harmony = new Harmony("krane.scopezoompresets");
             Apply(harmony, typeof(TogglePatch));
             Apply(harmony, typeof(RaidStartPatch));
+            Apply(harmony, typeof(HudPatch));
         }
 
         // A missing game member makes only that patch class fail; the rest of the game stays vanilla.
