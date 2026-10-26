@@ -3,8 +3,9 @@
 // The magnification hotkey ends in ScopeZoomHandler.ForceChangeScopeState, which jumps to whichever
 // native FOV edge is farther from the current one. TogglePatch keeps that rule but uses the group's
 // Min % / Max % points. Percent is linear in FOV between MinMaxFov.x (0%) and MinMaxFov.y (100%).
-// Zoom is stored as FOV in SightComponent.ScopeZoomValue and never sent over the network, so all of
-// this is local. Only the local player's scopes are touched.
+// Zoom is stored as FOV in SightComponent.ScopeZoomValue, ordinary item state that Fika syncs like
+// vanilla; values always stay inside the scope's native FOV range. The toggle and the HUD label are
+// local only: their patches gate on the local player's sights.
 using System;
 using BepInEx;
 using BepInEx.Configuration;
@@ -23,25 +24,46 @@ namespace Krane.ScopeZoomPresets
         {
             Log = Logger;
             ShowLabel = Config.Bind("HUD", "Show zoom label", true,
-                "Show percent and approximate zoom on every zoom change of an adjustable scope. Off: vanilla label.");
+                "Show percent and approximate zoom on each hotkey press and on scroll whenever the rounded percent changes, for the sight currently selected on your weapon. Off: vanilla label.");
+            ShowLabel.SettingChanged += (_, __) => RefreshLabel();
             GroupConfig.Bind(Config);
 
             var harmony = new Harmony("krane.scopezoompresets");
             Apply(harmony, typeof(TogglePatch));
             Apply(harmony, typeof(RaidStartPatch));
-            Apply(harmony, typeof(HudPatch));
+            LocalHandlers.Disabled = !Apply(harmony, typeof(LocalHandlersPatch));
+            Apply(harmony, typeof(CurveReversalPatch));
+            // The vanilla label is only suppressed when the replacement label is fully in place.
+            _labelActive = Apply(harmony, typeof(HudPatch)) && Apply(harmony, typeof(HudSuppressPatch));
+            RefreshLabel();
+        }
+
+        // True once both HUD patch classes applied. Without it the HUD code stays inert, so a partially
+        // applied HudPatch (Harmony keeps the patches it applied before a failure) shows no label.
+        private static bool _labelActive;
+
+        // Applied and enabled in config, as one plain static for the per-frame hook (no ConfigEntry access).
+        internal static bool LabelOn;
+
+        private static void RefreshLabel()
+        {
+            LabelOn = _labelActive && ShowLabel.Value && !LocalHandlers.Disabled;
         }
 
         // A missing game member makes only that patch class fail; the rest of the game stays vanilla.
-        internal static void Apply(Harmony harmony, Type patchClass)
+        // PatchAll(Type) applies one method at a time and keeps earlier ones when a later one fails, so
+        // classes are split by what must go together and the result decides what is switched on.
+        internal static bool Apply(Harmony harmony, Type patchClass)
         {
             try
             {
                 harmony.PatchAll(patchClass);
+                return true;
             }
             catch (Exception e)
             {
                 Log.LogError($"{patchClass.Name} not applied: {e}");
+                return false;
             }
         }
     }

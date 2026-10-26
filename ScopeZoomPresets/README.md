@@ -7,10 +7,10 @@
 
 ## What it does
 
-- The scope magnification hotkey on variable zoom scopes toggles between two points you choose per scope group, e.g. 15% and 70% of a 1x-6x scope instead of 1x and 6x. From an in-between zoom, it jumps to the farther point. Applies only to groups with Enabled on; disabled groups and unlisted ranges keep the vanilla toggle.
+- The scope magnification hotkey on variable zoom scopes toggles between two points you choose per scope group, e.g. 15% and 70% of a 1x-6x scope instead of 1x and 6x. From an in-between zoom, it jumps to the farther point. Applies only to groups with Enabled on; disabled groups, unlisted ranges and scopes with an unusual zoom curve (not a monotonic 0..1 map) keep the vanilla toggle.
 - At raid start, all your scopes in an enabled group, including loose ones in your bags, start at the group's lower toggle point, i.e. the lower of Min % and Max %.
-- The optic HUD label shows `N% · ~Zx` on each hotkey press and while scrolling whenever the rounded percent changes. When on, it replaces the vanilla `xN` label for variable zoom scopes.
-- Scroll zoom is unchanged and covers the full native range. Only your own scopes are affected; nothing is sent over the network.
+- The optic HUD label shows `N% · ~Zx` on each hotkey press and while scrolling whenever the rounded percent changes. It appears only for the sight currently selected on your weapon, and replaces the vanilla `xN` label for variable zoom scopes, including when the scope reaches a native edge. While a fixed sub-scope is selected (e.g. the 1x backup of an NcSTAR ADO), the vanilla label stays. The label is drawn only on a hotkey press or a zoom change, not when you draw the weapon. Scopes whose native range is inverted (MinMaxFov x <= y) are unsupported and stay fully vanilla.
+- Scroll zoom is unchanged and covers the full native range; after a toggle or a weapon redraw it continues from the current zoom without a jump. This holds for scopes with a normal zoom curve; scopes with an unusual curve (see above) behave exactly like vanilla, including vanilla's own jump when you scroll again from an in-between zoom. Only your own scopes are affected: bot and other players' handlers run vanilla code, and the plugin's hooks exit immediately for them (one flag or reference check, no changes). The toggle, the label and the scroll correction apply only to the weapon in your hands. The zoom value is ordinary item state that Fika syncs like vanilla, and it always stays within the scope's native range.
 
 Percent is linear in the scope's field of view: 0% is its lowest native zoom, 100% its highest. The `~Zx` value is an approximation; the game has no exact magnification for in-between zooms.
 
@@ -20,7 +20,7 @@ Vanilla only toggles between the extremes of a variable scope (1x/6x). Often a c
 
 ## Groups
 
-1x-4x, 1x-6x, 1x-8x, 2.5x-8x, 3x-9x, 3x-10x, 3x-20x, 3x-24x, 4x-16x, 5x-25x, 6.5x-20x, 7x-35x. A scope belongs to the group of the label range in its item data, so modded variants (black/tan Razors) share their base scope's group. Scopes with another range, and scopes in disabled groups, keep the vanilla toggle. The BepInEx log lists every variable scope and its group at the first raid start.
+1x-4x, 1x-6x, 1x-8x, 2.5x-8x, 3x-9x, 3x-10x, 3x-20x, 3x-24x, 4x-16x, 5x-25x, 6.5x-20x, 7x-35x. A scope belongs to the group of the label range of its variable zoom entry in its item data (the selected sub-scope's entry when it is variable, otherwise the first variable entry, so an NcSTAR ADO with its 1x backup selected still belongs to 3x-9x), so modded variants (black/tan Razors) share their base scope's group. Scopes with another range, and scopes in disabled groups, keep the vanilla toggle. The BepInEx log lists every variable scope and its group at the first raid start.
 
 ## Settings
 
@@ -29,4 +29,4 @@ Vanilla only toggles between the extremes of a variable scope (1x/6x). Often a c
 | `<group>` / Enabled | false | Use this group's toggle points and raid-start reset |
 | `<group>` / Min % | 0 | Low-zoom toggle point, 0-100 |
 | `<group>` / Max % | 100 | High-zoom toggle point, 0-100. Swapped with Min % if lower |
-| HUD / Show zoom label | true | Show `N% · ~Zx` on every zoom change. Off: vanilla label |
+| HUD / Show zoom label | true | Show `N% · ~Zx` on each hotkey press and on scroll when the rounded percent changes. Off: vanilla label |

@@ -31,7 +31,7 @@ namespace Krane.ScopeZoomPresets
                 Groups[section] = new GroupSettings
                 {
                     Enabled = config.Bind(section, "Enabled", false,
-                        "Use this group's toggle points and start its scopes at Min % at raid start."),
+                        "Use this group's toggle points and start its scopes at the lower of Min % and Max % at raid start."),
                     MinPercent = config.Bind(section, "Min %", 0, new ConfigDescription(
                         "Low-zoom toggle point. 0% is the scope's native lowest zoom.", percent)),
                     MaxPercent = config.Bind(section, "Max %", 100, new ConfigDescription(

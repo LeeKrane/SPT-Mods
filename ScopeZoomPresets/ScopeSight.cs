@@ -1,5 +1,3 @@
-using Comfort.Common;
-using EFT;
 using EFT.InventoryLogic;
 
 namespace Krane.ScopeZoomPresets
@@ -13,28 +11,29 @@ namespace Krane.ScopeZoomPresets
             return zooms != null && index >= 0 && index < zooms.Length ? zooms[index] : null;
         }
 
+        // The variable entry the handler drives: the selected sub-scope's when variable, else the first one.
+        public static float[] VariableEntry(SightComponent sight)
+        {
+            return GroupKeys.VariableEntry(sight?._template?.Zooms, sight?.SelectedScope ?? -1);
+        }
+
+        // False while a fixed backup sub-scope (e.g. the ADO's 1x) is selected.
+        public static bool IsVariableSelected(SightComponent sight)
+        {
+            return GroupKeys.IsVariable(Zooms(sight));
+        }
+
         public static bool IsAdjustable(SightComponent sight)
         {
             var data = sight?.AdjustableOpticData;
-            return data != null && data.IsAdjustableOptic && data.MinMaxFov.x != data.MinMaxFov.y;
-        }
-
-        // Bots and Fika observed players run the same ScopeZoomHandler code. A sight belongs to the
-        // local player when it sits anywhere under the local player's equipment. GetRootItem cannot
-        // be used: it stops at the weapon, before the InventoryEquipment parent.
-        public static bool IsLocal(SightComponent sight)
-        {
-            if (sight?.Item == null || !Singleton<GameWorld>.Instantiated)
-                return false;
-            Player player = Singleton<GameWorld>.Instance.MainPlayer;
-            return player != null && sight.Item.CurrentAddress?.IsChildOf(player.Equipment) == true;
+            return data != null && data.IsAdjustableOptic && ZoomMath.IsSupportedRange(data.MinMaxFov.x, data.MinMaxFov.y);
         }
 
         public static GroupSettings EnabledGroup(SightComponent sight)
         {
             if (!IsAdjustable(sight))
                 return null;
-            GroupSettings group = GroupConfig.Get(GroupKeys.Find(Zooms(sight)));
+            GroupSettings group = GroupConfig.Get(GroupKeys.Find(VariableEntry(sight)));
             return group != null && group.Enabled.Value ? group : null;
         }
     }
