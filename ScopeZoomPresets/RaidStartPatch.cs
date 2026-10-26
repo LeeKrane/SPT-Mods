@@ -20,7 +20,6 @@ namespace Krane.ScopeZoomPresets
         {
             try
             {
-                LogScopesOnce();
                 Player player = __instance.MainPlayer;
                 if (player == null)
                     return;
@@ -49,6 +48,15 @@ namespace Krane.ScopeZoomPresets
             {
                 Plugin.Log.LogError(e);
             }
+
+            try
+            {
+                LogScopesOnce();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError(e);
+            }
         }
 
         // One line per adjustable optic template and scope index, to check where modded scopes land.
@@ -66,7 +74,7 @@ namespace Krane.ScopeZoomPresets
                     float[] zooms = template.Zooms[i];
                     string group = GroupKeys.Find(zooms) ?? "unlisted";
                     Plugin.Log.LogInfo($"{template._id} {template._name} scope {i} " +
-                        $"Zooms=[{string.Join(", ", zooms)}] MinMaxFov=({template.MinMaxFov.x}, {template.MinMaxFov.y}) group={group}");
+                        $"Zooms=[{(zooms == null ? "null" : string.Join(", ", zooms))}] MinMaxFov=({template.MinMaxFov.x}, {template.MinMaxFov.y}) group={group}");
                 }
             }
         }
