@@ -7,9 +7,9 @@
 
 ## What it does
 
-- The scope magnification hotkey on variable zoom scopes toggles between two points you choose per scope group, e.g. 15% and 70% of a 1x-6x scope instead of 1x and 6x. From an in-between zoom, it jumps to the farther point.
-- At raid start, scopes in an enabled group start at the group's lower toggle point, i.e. the lower of Min % and Max %.
-- The optic HUD label shows `N% · ~Zx` on every zoom change (hotkey and scroll) for all variable zoom scopes.
+- The scope magnification hotkey on variable zoom scopes toggles between two points you choose per scope group, e.g. 15% and 70% of a 1x-6x scope instead of 1x and 6x. From an in-between zoom, it jumps to the farther point. Applies only to groups with Enabled on; disabled groups and unlisted ranges keep the vanilla toggle.
+- At raid start, all your scopes in an enabled group, including loose ones in your bags, start at the group's lower toggle point, i.e. the lower of Min % and Max %.
+- The optic HUD label shows `N% · ~Zx` on each hotkey press and while scrolling whenever the rounded percent changes. When on, it replaces the vanilla `xN` label for variable zoom scopes.
 - Scroll zoom is unchanged and covers the full native range. Only your own scopes are affected; nothing is sent over the network.
 
 Percent is linear in the scope's field of view: 0% is its lowest native zoom, 100% its highest. The `~Zx` value is an approximation; the game has no exact magnification for in-between zooms.
@@ -20,7 +20,7 @@ Vanilla only toggles between the extremes of a variable scope (1x/6x). Often a c
 
 ## Groups
 
-1x-4x, 1x-6x, 1x-8x, 2.5x-8x, 3x-9x, 3x-10x, 3x-20x, 3x-24x, 4x-16x, 5x-25x, 6.5x-20x, 7x-35x. A scope belongs to the group of the label range in its item data, so modded variants (black/tan Razors) share their base scope's group. Scopes with another range keep the vanilla toggle. The BepInEx log lists every variable scope and its group at the first raid start.
+1x-4x, 1x-6x, 1x-8x, 2.5x-8x, 3x-9x, 3x-10x, 3x-20x, 3x-24x, 4x-16x, 5x-25x, 6.5x-20x, 7x-35x. A scope belongs to the group of the label range in its item data, so modded variants (black/tan Razors) share their base scope's group. Scopes with another range, and scopes in disabled groups, keep the vanilla toggle. The BepInEx log lists every variable scope and its group at the first raid start.
 
 ## Settings
 
