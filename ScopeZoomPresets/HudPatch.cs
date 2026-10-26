@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using EFT.InventoryLogic;
 using EFT.UI;
+using EFT.UI.Screens;
 using HarmonyLib;
 
 namespace Krane.ScopeZoomPresets
@@ -11,18 +12,20 @@ namespace Krane.ScopeZoomPresets
     // every zoom change instead: once per hotkey press, and on scroll whenever the rounded percent changes.
     internal static class HudPatch
     {
-        private static EftBattleUIScreen _screen;
+        private static BattleUIScreen<EftBattleUIScreen.EftBattleUIScreenController, EEftScreenType> _screen;
         private static ScopeZoomHandler _lastHandler;
         private static int _lastPercent = -1;
 
-        [HarmonyPatch(typeof(EftBattleUIScreen), "SubscribeOnPlayer")]
+        [HarmonyPatch(typeof(BattleUIScreen<EftBattleUIScreen.EftBattleUIScreenController, EEftScreenType>), "SubscribeOnPlayer")]
         [HarmonyPostfix]
-        private static void SubscribePostfix(EftBattleUIScreen __instance)
+        private static void SubscribePostfix(BattleUIScreen<EftBattleUIScreen.EftBattleUIScreenController, EEftScreenType> __instance)
         {
             _screen = __instance;
+            _lastHandler = null;
+            _lastPercent = -1;
         }
 
-        [HarmonyPatch(typeof(EftBattleUIScreen), "SmoothSightChanged")]
+        [HarmonyPatch(typeof(BattleUIScreen<EftBattleUIScreen.EftBattleUIScreenController, EEftScreenType>), "SmoothSightChanged")]
         [HarmonyPrefix]
         private static bool SmoothSightChangedPrefix(SightComponent sightComponent)
         {
