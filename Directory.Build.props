@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <SptDir>$(HOME)/Games/spt/drive_c/SPT</SptDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Sirenix.Serialization.dll" Private="false" />
+    <Reference Include="$(SptDir)/BepInEx/core/BepInEx.dll" Private="false" />
+    <Reference Include="$(SptDir)/BepInEx/core/0Harmony.dll" Private="false" />
+  </ItemGroup>
+</Project>
