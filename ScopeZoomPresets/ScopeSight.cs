@@ -20,13 +20,14 @@ namespace Krane.ScopeZoomPresets
         }
 
         // Bots and Fika observed players run the same ScopeZoomHandler code. A sight belongs to the
-        // local player when its root item is the local player's equipment.
+        // local player when it sits anywhere under the local player's equipment. GetRootItem cannot
+        // be used: it stops at the weapon, before the InventoryEquipment parent.
         public static bool IsLocal(SightComponent sight)
         {
             if (sight?.Item == null || !Singleton<GameWorld>.Instantiated)
                 return false;
             Player player = Singleton<GameWorld>.Instance.MainPlayer;
-            return player != null && sight.Item.GetRootItem() == player.Equipment;
+            return player != null && sight.Item.CurrentAddress?.IsChildOf(player.Equipment) == true;
         }
 
         public static GroupSettings EnabledGroup(SightComponent sight)

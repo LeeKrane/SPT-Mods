@@ -29,7 +29,7 @@ namespace Krane.ScopeZoomPresets
         [HarmonyPrefix]
         private static bool SmoothSightChangedPrefix(SightComponent sightComponent)
         {
-            return !(Plugin.ShowLabel.Value && ScopeSight.IsAdjustable(sightComponent));
+            return !(Plugin.ShowLabel.Value && ScopeSight.IsAdjustable(sightComponent) && ScopeSight.IsLocal(sightComponent));
         }
 
         [HarmonyPatch(typeof(ScopeZoomHandler), nameof(ScopeZoomHandler.method_4))]
