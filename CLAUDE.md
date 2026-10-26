@@ -11,3 +11,7 @@ Never copy a built DLL into the plugin path. Symlink it, so a rebuild goes live 
 ```
 ln -s ~/development/spt-fixes/<Name>/out/krane.<Name>.dll ~/Games/spt/drive_c/SPT/BepInEx/plugins/krane.<Name>.dll
 ```
+
+Every plugin has a concise `<Name>/README.md` covering: requirements (SPT/Fika versions, other mods, hard or soft dependency), what it does, why it exists, and a settings table (section / key, default, effect). Write it when creating a plugin. Update it in the same change whenever behavior, dependencies or config entries change.
+
+Commit messages: subject only, super concise, prefixed with the plugin in brackets, e.g. `[DecalLockFix] Fix decal lock on reload`. Changes spanning several plugins list each: `[MagTopUp][UIAExtras] ...`. Non-plugin changes use `[scripts]` for `scripts/` and `[repo]` for repo-wide files (CLAUDE.md, .gitignore, Directory.Build.props).
