@@ -8,7 +8,7 @@
 ## What it does
 
 - The scope magnification hotkey on variable zoom scopes toggles between two points you choose per scope group, e.g. 15% and 70% of a 1x-6x scope instead of 1x and 6x. From an in-between zoom, it jumps to the farther point.
-- At raid start, scopes in an enabled group start at the group's Min %.
+- At raid start, scopes in an enabled group start at the group's lower toggle point, i.e. the lower of Min % and Max %.
 - The optic HUD label shows `N% · ~Zx` on every zoom change (hotkey and scroll) for all variable zoom scopes.
 - Scroll zoom is unchanged and covers the full native range. Only your own scopes are affected; nothing is sent over the network.
 
