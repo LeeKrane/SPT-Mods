@@ -10,6 +10,10 @@
 //   2. magazine empty: top round of another magazine of the same model, then of the same caliber,
 //   3. the strongest ammo (penetration, then damage) in the caliber of the first equipped weapon
 //      the magazine fits (primary, secondary, holster), else any ammo the magazine accepts.
+// Fill under (default on): the pick above is chosen once per run and remembered per magazine. If there is
+// not enough of it to fill the magazine, the gap is filled with other ammo of its caliber: weaker or equal
+// types first, closest in strength first, then stronger types (closest first) if still short. Load order
+// bottom to top: weaker filler (weakest lowest), pick, stronger filler. Off: one pick per stack until full.
 // Each stack goes through the controller's LoadMagazine, exactly like dragging ammo onto the
 // magazine: in raid that is the timed load with Mag Drills XP (and Fika's wrapper), out of raid
 // the plain transaction. One stack per call, awaited; the sequence stops on failure, on a short
@@ -32,11 +36,12 @@ using UnityEngine.EventSystems;
 
 namespace Krane.MagTopUp
 {
-    [BepInPlugin("krane.magtopup", "Krane's MagTopUp", "1.0.3")]
+    [BepInPlugin("krane.magtopup", "Krane's MagTopUp", "1.1.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
         internal static ConfigEntry<KeyboardShortcut> TopUpKey;
+        internal static ConfigEntry<bool> FillUnder;
 
         private static readonly FieldInfo UiController = AccessTools.Field(typeof(ItemUiContext), "_inventoryController");
         private const int LoadTimeoutMs = 120000;
@@ -53,6 +58,10 @@ namespace Krane.MagTopUp
             Log = Logger;
             TopUpKey = Config.Bind("General", "Top Up Magazine", new KeyboardShortcut(KeyCode.T),
                 "Fill the magazine under the cursor from loose ammo (inventory screen only). Press again to cancel");
+            FillUnder = Config.Bind("General", "Fill Under Picked Ammo", true,
+                "When the picked ammo cannot fill the magazine, load weaker ammo of the same caliber under it "
+                + "(closest in strength first), then stronger ammo above it if still short, so the magazine ends full "
+                + "with the picked ammo above all weaker rounds");
         }
 
         private static bool TextboxActive()
@@ -125,24 +134,98 @@ namespace Krane.MagTopUp
             _runMag = mag;
             try
             {
-                while (gen == _gen && !_cancel && Eligible(mag, ctrl))
-                {
-                    var ammo = PickAmmo(mag, ctrl);
-                    if (ammo == null) break;
-                    int want = Math.Min(ammo.StackObjectsCount, mag.MaxCount - mag.Count);
-                    int before = mag.Count;
-                    var load = ctrl.LoadMagazine(ammo, mag, want, false);
-                    _loading = true;
-                    var done = await Task.WhenAny(load, Task.Delay(LoadTimeoutMs));
-                    if (gen != _gen) break;
-                    _loading = false;
-                    if (done != load) { Log.LogWarning("load did not finish in time, stopping"); break; }
-                    var result = await load;
-                    if (_cancel || !result.Succeed || mag.Count - before < want) break;
-                }
+                if (FillUnder.Value) await RunFill(mag, ctrl, gen);
+                else
+                    while (gen == _gen && !_cancel && Eligible(mag, ctrl))
+                    {
+                        var ammo = PickAmmo(mag, ctrl);
+                        if (ammo == null || !await LoadStack(ammo, mag, ctrl, int.MaxValue, gen)) break;
+                    }
             }
             catch (Exception e) { Log.LogError("top-up failed: " + e); }
             finally { if (gen == _gen) Reset(); }
+        }
+
+        // Last fill-under pick per magazine id, plus every ammo type that run loaded. Reused while the top round
+        // is one of those types, so a cancelled or shot-down magazine keeps its pick instead of adopting filler.
+        private class Pick
+        {
+            public Ammo Primary;
+            public readonly HashSet<string> Loaded = new HashSet<string>();
+        }
+
+        private static readonly Dictionary<string, Pick> Picks = new Dictionary<string, Pick>();
+
+        private static string Tpl(Ammo a) => a.TemplateId.ToString();
+
+        // Strength: penetration, then damage.
+        private static int Compare(Ammo a, Ammo b)
+        {
+            int c = a.PenetrationPower.CompareTo(b.PenetrationPower);
+            return c != 0 ? c : a.Damage.CompareTo(b.Damage);
+        }
+
+        // Bottom to top: weaker filler (weakest lowest; equal strength counts as weaker), the pick, stronger filler.
+        // Weaker filler covers only what the pick cannot. Every load re-reads the inventory, so ammo that
+        // vanished mid-run is made up by the later phases.
+        private async Task RunFill(Magazine mag, ItemController ctrl, int gen)
+        {
+            var pool = Pool(ctrl);
+            var loose = Loose(mag, ctrl, pool);
+            var key = mag.Id.ToString();
+            if (!Picks.TryGetValue(key, out var pick) || !(mag.FirstRealAmmo() is Ammo top && pick.Loaded.Contains(Tpl(top))))
+            {
+                var primary = PickAmmo(mag, ctrl, pool, loose);
+                if (primary == null) return;
+                Picks[key] = pick = new Pick { Primary = primary };
+                pick.Loaded.Add(Tpl(primary));
+            }
+            var pt = Tpl(pick.Primary);
+
+            async Task<bool> Load(Ammo ammo, int count)
+            {
+                pick.Loaded.Add(Tpl(ammo));
+                if (!await LoadStack(ammo, mag, ctrl, count, gen)) return false;
+                loose = Loose(mag, ctrl);
+                return gen == _gen && !_cancel && Eligible(mag, ctrl);
+            }
+
+            List<Ammo> Filler(Func<int, bool> side) => loose
+                .Where(a => a.Caliber == pick.Primary.Caliber && Tpl(a) != pt && side(Compare(a, pick.Primary))).ToList();
+
+            while (true)
+            {
+                int gap = mag.MaxCount - mag.Count - loose.Where(a => Tpl(a) == pt).Sum(a => a.StackObjectsCount);
+                if (gap <= 0) break;
+                // Closest weaker types until the gap is covered; load the weakest of those first.
+                var types = Filler(c => c <= 0).GroupBy(Tpl)
+                    .OrderByDescending(g => g.First(), Comparer<Ammo>.Create(Compare)).ThenBy(g => g.Key).ToList();
+                if (types.Count == 0) break;
+                int covered = 0, i = 0;
+                for (; i < types.Count - 1 && covered + types[i].Sum(a => a.StackObjectsCount) < gap; i++)
+                    covered += types[i].Sum(a => a.StackObjectsCount);
+                if (!await Load(types[i].First(), gap - covered)) return;
+            }
+            for (Ammo ammo; (ammo = loose.FirstOrDefault(a => Tpl(a) == pt)) != null;)
+                if (!await Load(ammo, int.MaxValue)) return;
+            for (Ammo ammo; (ammo = Filler(c => c > 0).OrderBy(a => a, Comparer<Ammo>.Create(Compare)).ThenBy(Tpl).FirstOrDefault()) != null;)
+                if (!await Load(ammo, int.MaxValue)) return;
+        }
+
+        // Loads up to count rounds from one stack. False when the sequence must stop: cancelled, failed,
+        // timed out, or a short load (the timed process was cancelled).
+        private async Task<bool> LoadStack(Ammo ammo, Magazine mag, ItemController ctrl, int count, int gen)
+        {
+            int want = Math.Min(count, Math.Min(ammo.StackObjectsCount, mag.MaxCount - mag.Count));
+            int before = mag.Count;
+            var load = ctrl.LoadMagazine(ammo, mag, want, false);
+            _loading = true;
+            var done = await Task.WhenAny(load, Task.Delay(LoadTimeoutMs));
+            if (gen != _gen) return false;
+            _loading = false;
+            if (done != load) { Log.LogWarning("load did not finish in time, stopping"); return false; }
+            var result = await load;
+            return !_cancel && result.Succeed && mag.Count - before >= want;
         }
 
         // Everything searched: equipment (all nested), plus the stash's own grids out of raid.
@@ -167,12 +250,20 @@ namespace Krane.MagTopUp
             return null;
         }
 
+        // Examined loose stacks the magazine accepts, in grids only (never ammo boxes, magazines or chambers).
+        private static List<Ammo> Loose(Magazine mag, ItemController ctrl, List<Item> pool = null) =>
+            (pool ?? Pool(ctrl)).OfType<Ammo>().Where(a =>
+                a.Parent.Container is Grid g && !(g.ParentItem is Weapon) && !(g.ParentItem is Mod)
+                && a.StackObjectsCount > 0 && !a.IsUsed && ctrl.Examined(a) && mag.CheckCompatibility(a)).ToList();
+
         private static Ammo PickAmmo(Magazine mag, ItemController ctrl)
         {
             var pool = Pool(ctrl);
-            var loose = pool.OfType<Ammo>().Where(a =>
-                a.Parent.Container is Grid g && !(g.ParentItem is Weapon) && !(g.ParentItem is Mod)
-                && a.StackObjectsCount > 0 && !a.IsUsed && ctrl.Examined(a) && mag.CheckCompatibility(a)).ToList();
+            return PickAmmo(mag, ctrl, pool, Loose(mag, ctrl, pool));
+        }
+
+        private static Ammo PickAmmo(Magazine mag, ItemController ctrl, List<Item> pool, List<Ammo> loose)
+        {
             if (loose.Count == 0) return null;
 
             // 1. top round of this magazine
