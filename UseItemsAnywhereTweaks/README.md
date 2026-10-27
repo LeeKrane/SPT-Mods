@@ -1,4 +1,4 @@
-# UIAExtras
+# UseItemsAnywhereTweaks
 
 **Requires:** SPT 4.1.6, Use Items Anywhere (`com.cj.useFromAnywhere`). Without it the plugin does nothing. Fika-compatible (2.4.6).
 
@@ -11,7 +11,7 @@ Extends Use Items Anywhere's quick-use wheel:
 - **Use items while busy.** The wheel stays usable while a med is in use or hands are switching. The selection is queued.
 
 ## Why
-UIA blocks all input while the wheel is open, so you stand still while healing. Its category pages also make you hunt for the same items every time.
+Use Items Anywhere (UIA) blocks all input while the wheel is open, so you stand still while healing. Its category pages also make you hunt for the same items every time.
 
 ## Settings
 | Key | Default | Effect |

@@ -34,13 +34,13 @@ using EFT.InputSystem;
 using HarmonyLib;
 using UnityEngine;
 
-namespace Krane.UIAExtras
+namespace Krane.UseItemsAnywhereTweaks
 {
-    [BepInPlugin("krane.UIAExtras", "Krane's UIA Extras", "5.1.0")]
+    [BepInPlugin("krane.UseItemsAnywhereTweaks", "Krane's Use Items Anywhere Tweaks", "5.1.0")]
     [BepInDependency("com.cj.useFromAnywhere", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        internal const string HarmonyId = "krane.UIAExtras";
+        internal const string HarmonyId = "krane.UseItemsAnywhereTweaks";
         internal const string ExtrasHarmonyId = HarmonyId + ".slots";
         private static readonly List<string> _patchErrors = new List<string>();
         internal static ManualLogSource Log;
@@ -104,10 +104,10 @@ namespace Krane.UIAExtras
             AllowSprint = Config.Bind("General", "Allow Sprint", true,
                 "Also pass the sprint key through while the wheel is open.");
             ShowItemsDuringUse = Config.Bind("General", "Show Items During Use", true,
-                "Keep items available in the wheel while a med/food item is being used or hands are switching. Vanilla locks the inventory meanwhile, so UIA marked everything UNAVAILABLE; its pending-use logic (replace/queue) then handles the selection.");
+                "Keep items available in the wheel while a med/food item is being used or hands are switching. Vanilla locks the inventory meanwhile, so Use Items Anywhere marked everything UNAVAILABLE; its pending-use logic (replace/queue) then handles the selection.");
 
             DebugLogWheelKey = Config.Bind("Debug", "Log Wheel Key", false,
-                "Log UIA wheel key presses, controller state, Open bail conditions and gesture begin/reset. For diagnosing a wheel that will not open. Changing this needs a game restart (the debug hooks are only installed at startup when it is on).");
+                "Log Use Items Anywhere wheel key presses, controller state, Open bail conditions and gesture begin/reset. For diagnosing a wheel that will not open. Changing this needs a game restart (the debug hooks are only installed at startup when it is on).");
 
             // Soft dependency: BepInEx sorts plugins so the other mod loads first when present.
             if (!Chainloader.PluginInfos.ContainsKey("com.cj.useFromAnywhere"))
@@ -139,12 +139,12 @@ namespace Krane.UIAExtras
                 var enable = config == null ? null : AccessTools.Field(config, pair[1]);
                 if (enable != null && (!enable.IsStatic || enable.FieldType != typeof(ConfigEntry<bool>))) enable = null;
                 if (enable == null)
-                    Log.LogWarning("UIA " + pair[1] + " entry not found; its shortcut counts as always enabled in conflict resolution.");
+                    Log.LogWarning("Use Items Anywhere " + pair[1] + " entry not found; its shortcut counts as always enabled in conflict resolution.");
                 shortcuts.Add(new WheelShortcut { Key = key, Enable = enable });
             }
             _shortcuts = shortcuts.ToArray();
             if (_shortcuts.Length < 2)
-                Log.LogWarning("UIA wheel shortcut config entries not found; shortcut conflict resolution disabled.");
+                Log.LogWarning("Use Items Anywhere wheel shortcut config entries not found; shortcut conflict resolution disabled.");
 
             var harmony = new Harmony(HarmonyId);
             var extrasHarmony = new Harmony(ExtrasHarmonyId);
@@ -180,13 +180,13 @@ namespace Krane.UIAExtras
                 catch (Exception e)
                 {
                     extrasHarmony.UnpatchSelf();
-                    Log.LogError("[UIA Extras] Pinned wheel patching failed, those patches removed: " + e);
+                    Log.LogError("[Use Items Anywhere Tweaks] Pinned wheel patching failed, those patches removed: " + e);
                 }
             }
             catch (Exception e)
             {
                 harmony.UnpatchSelf();
-                Log.LogError("[UIA Extras] Patching failed, everything unpatched: " + e);
+                Log.LogError("[Use Items Anywhere Tweaks] Patching failed, everything unpatched: " + e);
                 return;
             }
             finally
@@ -212,7 +212,7 @@ namespace Krane.UIAExtras
                 {
                     debugHarmony.UnpatchSelf();
                     WheelDebug.Active = false;
-                    Log.LogError("[UIA Extras] Debug hooks failed, removed (movement fixes unaffected): " + e);
+                    Log.LogError("[Use Items Anywhere Tweaks] Debug hooks failed, removed (movement fixes unaffected): " + e);
                 }
                 finally
                 {

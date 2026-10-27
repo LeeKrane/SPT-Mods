@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>krane.UIAExtras</AssemblyName>
+    <AssemblyName>krane.UseItemsAnywhereTweaks</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Comfort.dll" Private="false" />

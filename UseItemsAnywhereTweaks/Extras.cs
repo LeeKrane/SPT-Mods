@@ -51,7 +51,7 @@ using HarmonyLib;
 using JsonType;
 using UnityEngine;
 
-namespace Krane.UIAExtras
+namespace Krane.UseItemsAnywhereTweaks
 {
     public enum CategoryFallback { Auto, Never }
 
@@ -174,7 +174,7 @@ namespace Krane.UIAExtras
             var namesType = UiaType("QuickUseCategoryNames");
             var classifierType = UiaType("QuickUseCategoryClassifier");
             var viewStateType = UiaType("QuickUseWheelViewState");
-            var configType = AccessTools.TypeByName("UseItemsAnywhere.Configuration") ?? throw new InvalidOperationException("UIA Configuration type not found");
+            var configType = AccessTools.TypeByName("UseItemsAnywhere.Configuration") ?? throw new InvalidOperationException("Use Items Anywhere Configuration type not found");
 
             _pseudoCategory = Enum.GetValues(_categoryType).Cast<object>().Max(v => Convert.ToInt32(v)) + 1;
             var table = new[]
@@ -510,7 +510,7 @@ namespace Krane.UIAExtras
         internal static void LogOnce(string key, Exception e)
         {
             if (_logged.Add(key))
-                Plugin.Log.LogError("[UIA Extras] " + key + " failed (logged once): " + e);
+                Plugin.Log.LogError("[Use Items Anywhere Tweaks] " + key + " failed (logged once): " + e);
         }
 
         private static string TemplateOf(Item item) => item.TemplateId.ToString();
@@ -1064,7 +1064,7 @@ namespace Krane.UIAExtras
     internal static class Fast
     {
         private static DynamicMethod Dm(string name, Type ret, params Type[] args) =>
-            new DynamicMethod("UIAExtras_" + name, ret, args, typeof(Fast).Module, true);
+            new DynamicMethod("UseItemsAnywhereTweaks_" + name, ret, args, typeof(Fast).Module, true);
 
         internal static Func<object, T> Getter<T>(FieldInfo f)
         {
