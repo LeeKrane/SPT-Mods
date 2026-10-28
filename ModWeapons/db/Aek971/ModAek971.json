@@ -1,0 +1,87 @@
+{
+  "6aa84f678601f2f04729f7c7": {
+    "itemTplToClone": "0cb4a36dd2e587b46e813dbe",
+    "parentId": "5447b5f14bdc2d61278b4567",
+    "handbookParentId": "5b5f78fc86f77409407a7f90",
+    "overrideProperties": {
+      "RecoilForceUp": 77,
+      "RecoilForceBack": 237,
+      "Ergonomics": 54,
+      "DurabilityBurnRatio": 0.575
+    },
+    "locales": {
+      "en": {
+        "name": "KMZ MOD-AEK-971 5.45x39 assault rifle",
+        "shortName": "MOD-AEK-971",
+        "description": "The AEK-971 is a selective fire 5.45x39mm assault rifle that was developed at the Kovrov Mechanical Plant (KMZ) by chief designer Stanislav Ivanovich Koksharov in the late 1970s and 1980s."
+      }
+    },
+    "fleaPriceRoubles": 378000,
+    "handbookPriceRoubles": 172000,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": true,
+    "weaponPresets": [
+      {
+        "_changeWeaponName": false,
+        "_encyclopedia": "6aa84f678601f2f04729f7c7",
+        "_id": "6a856eb8fd13a0324b3486f6",
+        "_items": [
+          {
+            "_id": "6abd33478826d2f5fa333e23",
+            "_tpl": "6aa84f678601f2f04729f7c7",
+            "upd": {
+              "Repairable": {
+                "MaxDurability": 100,
+                "Durability": 100
+              }
+            }
+          },
+          {
+            "_id": "6a49a2b54ee62b54c45d9549",
+            "_tpl": "5fef472e70dc85c1e6fb9e23",
+            "parentId": "6a6cf540136bcdd9a9f3b31f",
+            "slotId": "mod_muzzle"
+          },
+          {
+            "_id": "6a3cad84099c9db2e090740f",
+            "_tpl": "5cbdaf89ae9215000e5b9c94",
+            "parentId": "6abd33478826d2f5fa333e23",
+            "slotId": "mod_magazine"
+          },
+          {
+            "_id": "6a8b25b096a173346c2550e8",
+            "_tpl": "5ac72e475acfc400180ae6fe",
+            "parentId": "6abd33478826d2f5fa333e23",
+            "slotId": "mod_sight_rear"
+          },
+          {
+            "_id": "6a3ed0b746d6f13c9d373b5d",
+            "_tpl": "68609a328595f9559a666233",
+            "parentId": "6abd33478826d2f5fa333e23",
+            "slotId": "mod_pistol_grip"
+          },
+          {
+            "_id": "6a6cf540136bcdd9a9f3b31f",
+            "_tpl": "68609dc9fd6af45456e7d11c",
+            "parentId": "6abd33478826d2f5fa333e23",
+            "slotId": "mod_handguard"
+          },
+          {
+            "_id": "6a9813e443e7f645b8291c1b",
+            "_tpl": "c9dc0b769bd36d06524b9bde",
+            "parentId": "6abd33478826d2f5fa333e23",
+            "slotId": "mod_stock"
+          }
+        ],
+        "_name": "ModAek971_default",
+        "_parent": "6abd33478826d2f5fa333e23",
+        "_type": "Preset"
+      }
+    ]
+  }
+}
