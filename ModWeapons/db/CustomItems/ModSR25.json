@@ -1,0 +1,121 @@
+{
+  "6adb4485f8053e5cbd898d23": {
+    "itemTplToClone": "5df8ce05b11454561e39243b",
+    "parentId": "5447b6194bdc2d67278b4567",
+    "handbookParentId": "5b5f791486f774093f2ed3be",
+    "overrideProperties": {
+      "RecoilForceUp": 150,
+      "RecoilForceBack": 346,
+      "Ergonomics": 63
+    },
+    "locales": {
+      "en": {
+        "name": "Knight's Armament Company MOD-SR-25 7.62x51 marksman rifle",
+        "shortName": "MOD-SR-25",
+        "description": "The SR-25 Precision Rifle is the latest evolution of the precision 7.62mm NATO semi-automatic rifle. An ambidextrous bolt release, selector, and magazine release offers the left-handed user the ergonomic advantages inherent to AR-15 based controls, as well as giving right-handed users alternate methods of manipulation to increase efficiency of movement. The Drop-In 2-Stage Trigger serves as an aid to long range precision marksmanship. The E2 bolt and gas system provides superior reliability in function whether suppressed or unsuppressed."
+      }
+    },
+    "fleaPriceRoubles": 214746,
+    "handbookPriceRoubles": 49210,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": true,
+    "weaponPresets": [
+      {
+        "_changeWeaponName": false,
+        "_encyclopedia": "6adb4485f8053e5cbd898d23",
+        "_id": "6af31c1282f53f3fe42b025a",
+        "_items": [
+          {
+            "_id": "6a349e3d52d8b01763ec5a80",
+            "_tpl": "6adb4485f8053e5cbd898d23",
+            "upd": {
+              "FireMode": {
+                "FireMode": "single"
+              }
+            }
+          },
+          {
+            "_id": "6a080da5f7e19393627ea656",
+            "_tpl": "55d4b9964bdc2d1d4e8b456e",
+            "parentId": "6a349e3d52d8b01763ec5a80",
+            "slotId": "mod_pistol_grip"
+          },
+          {
+            "_id": "6ae5a956e59f2334cb7e84a1",
+            "_tpl": "5df8f541c41b2312ea3335e3",
+            "parentId": "6a349e3d52d8b01763ec5a80",
+            "slotId": "mod_magazine"
+          },
+          {
+            "_id": "6a47846386d4f87d912c47a7",
+            "_tpl": "5649be884bdc2d79388b4577",
+            "parentId": "6a349e3d52d8b01763ec5a80",
+            "slotId": "mod_stock"
+          },
+          {
+            "_id": "6a52355a39ea13a91f8daa92",
+            "_tpl": "5ae30c9a5acfc408fb139a03",
+            "parentId": "6a47846386d4f87d912c47a7",
+            "slotId": "mod_stock_000"
+          },
+          {
+            "_id": "6a9b8523bb27a22bece155b8",
+            "_tpl": "5df8e4080b92095fd441e594",
+            "parentId": "6a349e3d52d8b01763ec5a80",
+            "slotId": "mod_reciever"
+          },
+          {
+            "_id": "6a5b37c3311d94d3031f5485",
+            "_tpl": "5df917564a9f347bc92edca3",
+            "parentId": "6a9b8523bb27a22bece155b8",
+            "slotId": "mod_barrel"
+          },
+          {
+            "_id": "6a2532668446ef1cb7a5cc51",
+            "_tpl": "5dfa3cd1b33c0951220c079b",
+            "parentId": "6a5b37c3311d94d3031f5485",
+            "slotId": "mod_muzzle"
+          },
+          {
+            "_id": "6a1b83cb1dd2e9a292684b57",
+            "_tpl": "5dfa3d45dfc58d14537c20b0",
+            "parentId": "6a5b37c3311d94d3031f5485",
+            "slotId": "mod_gas_block"
+          },
+          {
+            "_id": "6a88b648a33562f88b9e1a8c",
+            "_tpl": "5df916dfbb49d91fb446d6b9",
+            "parentId": "6a9b8523bb27a22bece155b8",
+            "slotId": "mod_handguard"
+          },
+          {
+            "_id": "6aea9f778cee7dee3859cb9b",
+            "_tpl": "5dfa3d950dee1b22f862eae0",
+            "parentId": "6a88b648a33562f88b9e1a8c",
+            "slotId": "mod_sight_front"
+          },
+          {
+            "_id": "6a2216486b9bf026b1804b28",
+            "_tpl": "5dfa3d7ac41b2312ea33362a",
+            "parentId": "6a9b8523bb27a22bece155b8",
+            "slotId": "mod_sight_rear"
+          },
+          {
+            "_id": "6abb8f3c3cf7634345ad4da9",
+            "_tpl": "5df8e053bb49d91fb446d6a6",
+            "parentId": "6a349e3d52d8b01763ec5a80",
+            "slotId": "mod_charge"
+          }
+        ],
+        "_name": "MODSR25_default",
+        "_parent": "6a349e3d52d8b01763ec5a80",
+        "_type": "Preset"
+      }
+    ]
+  }
+}

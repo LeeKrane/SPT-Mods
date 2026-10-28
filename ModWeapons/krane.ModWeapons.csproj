@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>krane.ModWeapons</AssemblyName>
+    <RootNamespace>ModWeapons</RootNamespace>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)../ServerMod.props" />
+
+  <ItemGroup>
+    <Reference Include="WTT-ServerCommonLib"><HintPath>$(SptRuntime)/user/mods/WTT-ServerCommonLib/WTT-ServerCommonLib.dll</HintPath><Private>false</Private></Reference>
+    <None Include="db/**/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
