@@ -6,7 +6,8 @@
     "overrideProperties": {
       "RecoilForceUp": 150,
       "RecoilForceBack": 346,
-      "Ergonomics": 63
+      "Ergonomics": 63,
+      "DurabilityBurnRatio": 0.575
     },
     "locales": {
       "en": {

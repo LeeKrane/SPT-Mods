@@ -4,7 +4,7 @@
 
 ## What
 Adds custom weapons. Currently the "Knight's Armament Company MOD-SR-25 7.62x51 marksman rifle", a modified SR-25.
-- Same model, icon, description and attachment slots as the SR-25. Recoil up 150 (-5), recoil back 346 (-10), ergonomics 63 (+16).
+- Same model, icon, description and attachment slots as the SR-25. Recoil up 150 (-5), recoil back 346 (-10), ergonomics 63 (+16), durability burn ratio 0.575 (-50%).
 - Handbook price 49210, flea price 214746 (2x SR-25). Eligible for dynamic flea offers, which use the full default build (same 13 parts as the SR-25 default preset).
 - Trader offers, full default build, 1 per restock: Jaeger at LL4 and NATO Quartermaster at its only level, both in roubles, price 2x the SR-25 trader price (Jaeger: Peacekeeper's SR-25 price, all money entries summed and converted to roubles; NATO: its own SR-25 offer). Prices are read at startup; if the source offer is missing a warning is logged and 2x the SR-25 handbook price is used.
 - Added to every quest condition that lists the SR-25 (scanned at runtime, not hard-coded).
