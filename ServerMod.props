@@ -1,0 +1,77 @@
+<Project>
+  <!-- Shared by every server mod (SPT 4.1.6, net10). A mod csproj sets AssemblyName/RootNamespace, imports this
+       file and adds only its own extra references and files. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SptRuntime>$(HOME)/Games/spt/drive_c/SPT/SPT_Runtime</SptRuntime>
+    <OutDir>$(MSBuildProjectDirectory)/out/</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <!-- SPT 4.1.6 server runs on net10. Normal build: SDK 10+. -->
+  <PropertyGroup Condition="$([MSBuild]::VersionGreaterThanOrEquals($(NETCoreSdkVersion), 10.0))">
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- Fallback for machines with only SDK 8: compile against the net10 runtime implementation
+       assemblies instead of the missing net10 ref pack. SPT_Runtime is framework-dependent and ships
+       none of them. Set DotnetRoot (or env DOTNET_ROOT) to a dotnet root holding shared/Microsoft.NETCore.App/10.*
+       and shared/Microsoft.AspNetCore.App/10.*; the highest 10.* of each is used. -->
+  <PropertyGroup Condition="!$([MSBuild]::VersionGreaterThanOrEquals($(NETCoreSdkVersion), 10.0))">
+    <TargetFramework>net8.0</TargetFramework>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <NoStdLib>true</NoStdLib>
+  </PropertyGroup>
+
+  <Target Name="ResolveNet10Runtime" BeforeTargets="BeforeResolveReferences"
+          Condition="!$([MSBuild]::VersionGreaterThanOrEquals($(NETCoreSdkVersion), 10.0))">
+    <ItemGroup>
+      <_DotnetRoot Include="$(DotnetRoot);$(DOTNET_ROOT);$(DOTNET_ROOT_X64);$(NetCoreTargetingPackRoot)/.." />
+      <_CoreDir Include="$([System.IO.Directory]::GetDirectories('%(_DotnetRoot.Identity)/shared/Microsoft.NETCore.App', '10.*'))"
+                Condition="Exists('%(_DotnetRoot.Identity)/shared/Microsoft.NETCore.App')" />
+      <_AspDir Include="$([System.IO.Directory]::GetDirectories('%(_DotnetRoot.Identity)/shared/Microsoft.AspNetCore.App', '10.*'))"
+               Condition="Exists('%(_DotnetRoot.Identity)/shared/Microsoft.AspNetCore.App')" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_BestCoreVer>0.0.0</_BestCoreVer>
+      <_BestAspVer>0.0.0</_BestAspVer>
+    </PropertyGroup>
+    <!-- Highest 10.* wins; each directory is one batch. -->
+    <PropertyGroup>
+      <_V>%(_CoreDir.Filename)%(_CoreDir.Extension)</_V>
+      <Net10CoreDir Condition="'$(_V)' != '' And $([MSBuild]::VersionGreaterThan('$(_V)', $(_BestCoreVer)))">%(_CoreDir.FullPath)</Net10CoreDir>
+      <_BestCoreVer Condition="'$(_V)' != '' And $([MSBuild]::VersionGreaterThan('$(_V)', $(_BestCoreVer)))">$(_V)</_BestCoreVer>
+    </PropertyGroup>
+    <PropertyGroup>
+      <_V>%(_AspDir.Filename)%(_AspDir.Extension)</_V>
+      <Net10AspDir Condition="'$(_V)' != '' And $([MSBuild]::VersionGreaterThan('$(_V)', $(_BestAspVer)))">%(_AspDir.FullPath)</Net10AspDir>
+      <_BestAspVer Condition="'$(_V)' != '' And $([MSBuild]::VersionGreaterThan('$(_V)', $(_BestAspVer)))">$(_V)</_BestAspVer>
+    </PropertyGroup>
+    <Error Condition="'$(Net10CoreDir)' == '' Or '$(Net10AspDir)' == ''"
+           Text="SDK $(NETCoreSdkVersion) cannot target net10: no Microsoft.NETCore.App/10.* and Microsoft.AspNetCore.App/10.* found under any dotnet root. Install the .NET 10 SDK or set DotnetRoot (or DOTNET_ROOT) to a dotnet root with the .NET 10 shared runtimes." />
+    <ItemGroup>
+      <Reference Include="$(Net10CoreDir)/*.dll"
+                 Exclude="$(Net10CoreDir)/*Native*.dll;$(Net10CoreDir)/mscordaccore*.dll;$(Net10CoreDir)/libcoreclr*.dll;$(Net10CoreDir)/Microsoft.DiaSymReader.Native*.dll"
+                 Private="false" />
+      <Reference Include="$(Net10AspDir)/Microsoft.Extensions.Logging.Abstractions.dll" Private="false" />
+    </ItemGroup>
+  </Target>
+
+  <!-- ILogger lives in the ASP.NET shared framework, not in SPT_Runtime. -->
+  <ItemGroup Condition="$([MSBuild]::VersionGreaterThanOrEquals($(NETCoreSdkVersion), 10.0))">
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="SPTarkov.Server.Core"><HintPath>$(SptRuntime)/SPTarkov.Server.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SPTarkov.DI"><HintPath>$(SptRuntime)/SPTarkov.DI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SPTarkov.Common"><HintPath>$(SptRuntime)/SPTarkov.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SemanticVersioning"><HintPath>$(SptRuntime)/SemanticVersioning.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(SptRuntime)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>

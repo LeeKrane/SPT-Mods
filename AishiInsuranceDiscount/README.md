@@ -12,7 +12,7 @@ ISB-Aishi prices insurance in dollars at 1.4x (4x for restricted items) of the n
 Postfix on `Aishi.DollarServicePolicy.InsurancePrice`, the single function that produces Aishi insurance prices for both the Cost quote and the Insure payment. Result becomes `ceil(price * (1 - DiscountPercent / 100))`. If patching fails, a warning is logged and the discount is skipped; the server still loads.
 
 ## Build and deploy
-The server runs on taragarmr. Build with `-c Release` (needs the .NET 10 SDK, or SDK 8 plus a dotnet root holding the .NET 10 shared runtimes via `DOTNET_ROOT` or `-p:DotnetRoot=...`), then `scripts/deploy-server-mod.sh AishiInsuranceDiscount` and `scripts/restart-all.sh`.
+The server runs on taragarmr. The net10/SDK 8 fallback and the SPT references live in the shared `ServerMod.props` at the repo root, imported by the csproj. Build with `-c Release` (needs the .NET 10 SDK, or SDK 8 plus a dotnet root holding the .NET 10 shared runtimes via `DOTNET_ROOT` or `-p:DotnetRoot=...`), then `scripts/deploy-server-mod.sh AishiInsuranceDiscount` and `scripts/restart-all.sh`.
 
 ## Settings
 Edit `config.json` in the server's mod folder (`spt-server/SPT_Runtime/user/mods/krane-AishiInsuranceDiscount/` on taragarmr), then restart the server. Deploy never overwrites it; the copy in `out/` is only the default template, copied once if the remote has none.
