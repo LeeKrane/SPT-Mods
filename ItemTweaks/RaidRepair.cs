@@ -14,10 +14,14 @@
 //
 // Local repair mirrors SPT 4.1.6 RepairService.RepairItemByKit / RepairHelper.UpdateItemDurability / AddBuffToItem:
 //  gain = kit points / kit divisor (client RepairController.GetRepairPrice, same formula as RepairService.GetKitDivisor);
-//  Durability = min(Durability + gain, MaxDurability); MaxDurability -= round(rand(min,max kit degradation) * MaxDurability, 2)
-//  (RepairableComponent.RepairKitDegradation = armor material or template values, as the server's repair helper uses);
+//  Durability = min(Durability + gain, MaxDurability); MaxDurability -= round(rand(min,max kit degradation) * MaxDurability * wear%, 2)
+//  where wear% is the "In-Raid Wear Percent" setting (default 10%: a loss the server would roll as 3.5 becomes 0.35).
+//  Degradation base = RepairableComponent.RepairKitDegradation: armor material kit values (as the server); for weapons the
+//  client maps it to the template's trader repair values (WeaponTemplate: MinRepairKitDegradation => MinRepairDegradation)
+//  and has no kit values at all, while the server uses Min/MaxRepairKitDegradation (usually 0.005 lower). Accepted: at the
+//  scaled wear the difference is negligible;
 //  durability above the new max is clamped; face shield hits reset; common/rare buff roll (config values of repair.json).
-// Amount repaired = what the client repair UI would offer: MaxDurability - minimum expected kit degradation - Durability.
+// Amount repaired = what the client repair UI would offer: MaxDurability - minimum expected (scaled) kit degradation - Durability.
 // Elite Charisma: like RepairService.ShouldRepairKitApplyDurabilityLoss, each repaired item has a 50% chance to take no max
 // durability loss (rolled before the amount is computed, so the kit is not wasted). The client's skill-based
 // HasEliteNoWearRepair is not used: the server ignores it for kit repairs. Not mirrored: skill XP gain.
@@ -43,6 +47,7 @@ namespace Krane.ItemTweaks
     internal static class RaidRepair
     {
         internal static ConfigEntry<bool> Enabled;
+        internal static ConfigEntry<int> WearPercent;
 
         private static RepairController _controller;
         private static GameWorld _controllerWorld;
@@ -51,6 +56,9 @@ namespace Krane.ItemTweaks
         {
             Enabled = config.Bind("Repair", "Allow Repair Kits In Raid", true,
                 "Armor and weapon repair kits carried in raid equipment can be used in raid: drag a kit onto an item or use the item context menu Repair. Repair is instant, applied locally and saved at the end of the raid.");
+            WearPercent = config.Bind("Repair", "In-Raid Wear Percent", 10,
+                new ConfigDescription("Max durability lost by an in-raid kit repair, in percent of the normal kit repair loss (100 = as a stash kit repair, 0 = no loss). Applies to weapons, armor and plates.",
+                    new AcceptableValueRange<int>(0, 100)));
 
             Patch(harmony, AccessTools.Method(typeof(ItemContextInteractionsSwitcher), nameof(ItemContextInteractionsSwitcher.IsActive), new[] { typeof(EItemInfoButton) }),
                 postfix: nameof(IsActivePostfix));
@@ -302,12 +310,15 @@ namespace Krane.ItemTweaks
             return charisma != null && charisma.IsEliteLevel && UnityEngine.Random.value < 0.5f;
         }
 
+        // "In-Raid Wear Percent" as a factor on every max durability loss (and on the expected loss the amount is planned with).
+        private static float WearFactor => Mathf.Clamp(WearPercent.Value, 0, 100) / 100f;
+
         // RepairKitsCollection.GetDegradationValues + ArmorRepairStrategy/DefaultRepairStrategy.HowMuchRepairScoresCanAccept,
         // with the minimum degradation 0 only when this repair is a no-wear one.
         private static float WantedGain(RepairController controller, Item target, RepairableComponent repairable, bool noWear)
         {
             Vector2 degradation = (target.IsArmorMod() ? 1f : (float)controller.GetBaseRepairQuality(target)) * repairable.TemplateDurability * repairable.RepairKitDegradation;
-            return Mathf.Max(0f, repairable.MaxDurability - (noWear ? 0f : degradation.x) - repairable.Durability);
+            return Mathf.Max(0f, repairable.MaxDurability - (noWear ? 0f : degradation.x * WearFactor) - repairable.Durability);
         }
 
         // Pure: computes the result for one target and spends points in `remaining` only. Returns null when nothing to do.
@@ -338,11 +349,11 @@ namespace Krane.ItemTweaks
             if (gain <= 0f) return null;
 
             // RepairHelper.UpdateItemDurability: gain is added to Durability and MaxDurability, both capped at the current
-            // MaxDurability (so max is unchanged); degradation is rand(kit degradation) * current max, to 2 dp.
+            // MaxDurability (so max is unchanged); degradation is rand(kit degradation) * current max (* wear factor), to 2 dp.
             float maxBefore = repairable.MaxDurability;
             float newDurability = Mathf.Min(repairable.Durability + gain, maxBefore);
             Vector2 degradation = repairable.RepairKitDegradation;
-            float loss = noWear ? 0f : (float)Math.Round(UnityEngine.Random.Range(degradation.x, degradation.y) * maxBefore, 2);
+            float loss = noWear ? 0f : (float)Math.Round(UnityEngine.Random.Range(degradation.x, degradation.y) * maxBefore * WearFactor, 2);
             float newMax = Mathf.Max(0f, maxBefore - loss);
             if (newDurability > newMax) newDurability = newMax;
 
