@@ -6,7 +6,7 @@ All created plugins must be compatible with Fika 2.4.6 and SPT 4.1.6.
 
 SPT plugin path: `~/Games/spt/drive_c/SPT/BepInEx/plugins`
 
-Server mods (own `Directory.Build.props`, net10) run on taragarmr, not locally. Deploy with `scripts/deploy-server-mod.sh <Name>` (keeps the remote `config.json`), then `scripts/restart-all.sh`.
+Server mods (own `Directory.Build.props`, net10) are named with a `4Server` suffix (e.g. `FleaOfferGuard4Server`) and run on taragarmr, not locally. Deploy with `scripts/deploy-server-mod.sh <Name>` (keeps the remote `config.json`), then `scripts/restart-all.sh`.
 
 Never copy a built DLL into the plugin path. Symlink it, so a rebuild goes live without a copy step:
 
