@@ -8,7 +8,7 @@ Extends Use Items Anywhere's quick-use wheel:
 - **No helmet-camera bob** when the wheel opens.
 - **Pinned main wheel.** Replaces the category page with 1-3 pages of pinned item slots. Pin with the Pin Key, clear with the Clear Key.
 - **Category fallback.** If a pinned med is not carried, the slot shows another carried item that treats the same thing (e.g. another medkit).
-- **Use items while busy.** The wheel stays usable while a med is in use or hands are switching. The selection is queued.
+- **Use items while busy.** The wheel stays usable while a med is in use or hands are switching. A selection made during a med/food use waits until that use ends (Continuous Healing repeats included), then starts. A newer selection replaces the queued one; picking the item in use, interrupting (e.g. weapon key) or cancelling the use drops it. Needs Show Items During Use on and UIA's access delays off; with delays on, UIA's own Pending Item Use Behavior applies.
 
 ## Why
 Use Items Anywhere (UIA) blocks all input while the wheel is open, so you stand still while healing. Its category pages also make you hunt for the same items every time.
@@ -19,6 +19,7 @@ Use Items Anywhere (UIA) blocks all input while the wheel is open, so you stand 
 | General / Enabled | `true` | Let movement keep working while the wheel is open. |
 | General / Allow Sprint | `true` | Also pass sprint through. |
 | General / Show Items During Use | `true` | Keep items selectable while using a med or switching hands (queued). |
+| General / Queue Selection During Use | `true` | Selection during a med/food use waits for it to end. Needs Show Items During Use and UIA delays off. Off = it cancels the running use (vanilla). |
 | Main Wheel / Main Pages | `2` | Pages of pinned slots (1-3). Scroll to switch. |
 | Main Wheel / Slots Per Page | `8` | Slots per page (4-8). |
 | Wheel Pins / Pin Key | `Mouse2` (middle) | On a slot: open the item list to pick a pin. In the list: pin the hovered item. |
