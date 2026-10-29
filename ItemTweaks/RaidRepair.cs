@@ -279,13 +279,14 @@ namespace Krane.ItemTweaks
             // Plan every target first; nothing is mutated until all of them are planned.
             bool kitFound = false;
             var plans = new List<Plan>();
+            float wear = WearFactor; // snapshot: planning and application of this repair use the same value
             foreach (Item target in RepairTargets(item))
             {
                 RepairableComponent repairable = target.GetItemComponent<RepairableComponent>();
                 var usable = kits.Where(k => remaining[k] >= KitEpsilon && k.CanRepair(target)).ToList();
                 if (repairable == null || usable.Count == 0) continue;
                 kitFound = true;
-                Plan plan = PlanTarget(controller, target, repairable, usable, remaining);
+                Plan plan = PlanTarget(controller, target, repairable, usable, remaining, wear);
                 if (plan != null) plans.Add(plan);
             }
 
@@ -310,22 +311,29 @@ namespace Krane.ItemTweaks
             return charisma != null && charisma.IsEliteLevel && UnityEngine.Random.value < 0.5f;
         }
 
-        // "In-Raid Wear Percent" as a factor on every max durability loss (and on the expected loss the amount is planned with).
-        private static float WearFactor => Mathf.Clamp(WearPercent.Value, 0, 100) / 100f;
+        // "In-Raid Wear Percent" as a factor (0..1) on every max durability loss (and on the expected loss the amount is planned with).
+        private static float WearFactor => Mathf.Clamp01(WearPercent.Value / 100f);
+
+        // RepairHelper.GetRandomised*RepairDegradationValue: round(rand(kit degradation) * current max * quality, 2), quality = wear factor here.
+        // Planning (minimum) and application (random) both go through this, so the reserved loss is the least loss that can be applied.
+        private static float WearLoss(float degradationRoll, float maxDurability, float wear)
+        {
+            return (float)Math.Round(degradationRoll * maxDurability * wear, 2);
+        }
 
         // RepairKitsCollection.GetDegradationValues + ArmorRepairStrategy/DefaultRepairStrategy.HowMuchRepairScoresCanAccept,
-        // with the minimum degradation 0 only when this repair is a no-wear one.
-        private static float WantedGain(RepairController controller, Item target, RepairableComponent repairable, bool noWear)
+        // with the same base as the applied loss (current max) and the minimum loss 0 only when this repair is a no-wear one.
+        private static float WantedGain(RepairableComponent repairable, bool noWear, float wear)
         {
-            Vector2 degradation = (target.IsArmorMod() ? 1f : (float)controller.GetBaseRepairQuality(target)) * repairable.TemplateDurability * repairable.RepairKitDegradation;
-            return Mathf.Max(0f, repairable.MaxDurability - (noWear ? 0f : degradation.x * WearFactor) - repairable.Durability);
+            float minLoss = noWear ? 0f : WearLoss(repairable.RepairKitDegradation.x, repairable.MaxDurability, wear);
+            return Mathf.Max(0f, repairable.MaxDurability - minLoss - repairable.Durability);
         }
 
         // Pure: computes the result for one target and spends points in `remaining` only. Returns null when nothing to do.
-        private static Plan PlanTarget(RepairController controller, Item item, RepairableComponent repairable, List<RepairKit> kits, Dictionary<RepairKit, float> remaining)
+        private static Plan PlanTarget(RepairController controller, Item item, RepairableComponent repairable, List<RepairKit> kits, Dictionary<RepairKit, float> remaining, float wear)
         {
             bool noWear = RollNoWear();
-            float want = WantedGain(controller, item, repairable, noWear);
+            float want = WantedGain(repairable, noWear, wear);
             if (want / repairable.TemplateDurability < 0.001f) return null;
 
             float gain = 0f;
@@ -348,12 +356,15 @@ namespace Krane.ItemTweaks
             }
             if (gain <= 0f) return null;
 
+            // Tiny repairs: skip when the gain does not exceed the mean loss, so a repair never lowers max durability more than it gains on average.
+            Vector2 degradation = repairable.RepairKitDegradation;
+            float maxBefore = repairable.MaxDurability;
+            if (!noWear && gain <= WearLoss((degradation.x + degradation.y) / 2f, maxBefore, wear)) return null;
+
             // RepairHelper.UpdateItemDurability: gain is added to Durability and MaxDurability, both capped at the current
             // MaxDurability (so max is unchanged); degradation is rand(kit degradation) * current max (* wear factor), to 2 dp.
-            float maxBefore = repairable.MaxDurability;
             float newDurability = Mathf.Min(repairable.Durability + gain, maxBefore);
-            Vector2 degradation = repairable.RepairKitDegradation;
-            float loss = noWear ? 0f : (float)Math.Round(UnityEngine.Random.Range(degradation.x, degradation.y) * maxBefore * WearFactor, 2);
+            float loss = noWear ? 0f : WearLoss(UnityEngine.Random.Range(degradation.x, degradation.y), maxBefore, wear);
             float newMax = Mathf.Max(0f, maxBefore - loss);
             if (newDurability > newMax) newDurability = newMax;
 
