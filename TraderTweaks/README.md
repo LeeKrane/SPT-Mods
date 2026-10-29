@@ -13,4 +13,4 @@ Harry is added by a server mod for everyone. This lets a single player opt out w
 ## Settings
 | Section / Key | Default | Effect |
 |---|---|---|
-| Hideout Harry / Disable | `false` | Lock Hideout Harry on this client. Server profile is untouched. |
+| Hideout Harry / Disable Hideout Harry | `false` | Lock Hideout Harry on this client. Server profile is untouched. |

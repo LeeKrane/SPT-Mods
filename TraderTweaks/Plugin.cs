@@ -3,7 +3,7 @@
 // EFT decides whether a trader is usable through Profile.TraderInfo.Available (!Disabled && Unlocked && !banned).
 // Everything reads it: the trader card state, TraderScreensGroup.SelectTrader (returns early when not Available),
 // DisplayableTraders, Insurers, Repairers, Medic and flea offer views.
-// A postfix on the getter returns false for Harry's trader id while the "Disable" option is on, so Harry is
+// A postfix on the getter returns false for Harry's trader id while the "Disable Hideout Harry" option is on, so Harry is
 // treated like a trader that is not unlocked yet. Nothing is sent to the server and the profile is untouched.
 //
 // TraderCard.SetCardState only applies a new state when the trader is Available, so a card that already looked
@@ -30,7 +30,7 @@ namespace Krane.TraderTweaks
         private void Awake()
         {
             Log = Logger;
-            DisableHarry = Config.Bind("Hideout Harry", "Disable", false,
+            DisableHarry = Config.Bind("Hideout Harry", "Disable Hideout Harry", false,
                 "Lock Hideout Harry (acidphantasm-harryhideout) for you only: he shows as locked and cannot be opened or used. Nothing changes on the server.");
             DisableHarry.SettingChanged += (s, e) => RefreshCards();
             new Harmony("krane.tradertweaks").PatchAll(typeof(AvailablePatch).Assembly);
