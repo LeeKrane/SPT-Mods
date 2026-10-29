@@ -1,0 +1,57 @@
+{
+  "f39e1020a6eb538f07653b87": {
+    "itemTplToClone": "5c093e3486f77430cb02e593",
+    "parentId": "5795f317245977243854e041",
+    "handbookParentId": "5b5f6fa186f77409407a7eb7",
+    "overrideProperties": {
+      "Width": 1,
+      "Height": 1,
+      "BackgroundColor": "grey",
+      "CanSellOnRagfair": false,
+      "Grids": [
+        {
+          "_name": "main",
+          "_id": "cef83616f9b5749a80a50a02",
+          "_parent": "f39e1020a6eb538f07653b87",
+          "_props": {
+            "filters": [
+              {
+                "Filter": [
+                  "5447e0e74bdc2d3c308b4567",
+                  "591094e086f7747caa7bb2ef",
+                  "5910968f86f77425cf569c32",
+                  "5d02778e86f774203e7dedbe",
+                  "5d02797c86f774203f38e30a"
+                ],
+                "ExcludedFilter": []
+              }
+            ],
+            "cellsH": 3,
+            "cellsV": 6,
+            "minCount": 0,
+            "maxCount": 0,
+            "maxWeight": 0,
+            "isSortingTable": false
+          },
+          "_proto": "55d329c24bdc2d892f8b4567"
+        }
+      ]
+    },
+    "locales": {
+      "en": {
+        "name": "Spec-ops kit case",
+        "shortName": "SpecOps",
+        "description": "A compact grey case for repair kits, surgical kits and special items. Its lining reduces the weight of everything inside by 90%."
+      }
+    },
+    "fleaPriceRoubles": 8349000,
+    "handbookPriceRoubles": 8349000,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

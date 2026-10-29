@@ -1,9 +1,9 @@
-namespace ModWeapons;
+namespace ItemTweaks4Server;
 
-/// <summary>One trader offer of a clone. Prices are roubles; the offer is 1 root item (the full default build when the clone has a preset).</summary>
+/// <summary>One trader offer of a clone. Prices are roubles unless Currency says otherwise; the offer is 1 root item (the full default build when the clone has a preset).</summary>
 /// <param name="AssortIds">Trader assort ids, in preset item order (root first); one id for a clone without preset.</param>
 /// <param name="Limit">Purchases per profile per restock (BuyRestrictionMax).</param>
-/// <param name="FixedPrice">Price as is. Otherwise 2x the price of the source item at OwnPriceTrader.</param>
+/// <param name="FixedPrice">Price as is, in Currency. Otherwise 2x the price of the source item at OwnPriceTrader.</param>
 /// <param name="FallbackPriceTrader">Used when OwnPriceTrader has no source offer: 2x that trader's source price times FallbackFactor.</param>
 /// <param name="Optional">The trader is a soft dependency: skipped with a log line when absent.</param>
 internal sealed record OfferDef(
@@ -15,8 +15,12 @@ internal sealed record OfferDef(
     string? OwnPriceTrader = null,
     string? FallbackPriceTrader = null,
     double FallbackFactor = 1,
-    bool Optional = false)
+    bool Optional = false,
+    string? Currency = null)
 {
+    /// <summary>Payment currency tpl, roubles when null. Only FixedPrice supports another currency.</summary>
+    public string CurrencyTpl => Currency ?? Ids.Roubles;
+    public string CurrencyName => CurrencyTpl == Ids.Usd ? "USD" : CurrencyTpl == Ids.Eur ? "EUR" : "RUB";
     public string TraderName => Ids.TraderNames[TraderId];
 }
 
@@ -27,6 +31,9 @@ internal sealed record OfferDef(
 /// <param name="PresetId">Default preset of a weapon clone, null for an item sold on its own.</param>
 /// <param name="ShareMastery">Add the clone to every weapon mastery entry holding the source.</param>
 /// <param name="ReplicateFilters">Add the clone to every slot, cartridge and grid filter holding the source.</param>
+/// <param name="IsVariant">A stronger variant of the source: joins its quests, bot pools and filters (when ReplicateFilters). False for an unrelated new item
+/// that merely reuses the source's model.</param>
+/// <param name="AddToSpecialSlots">Add the clone to the filter of every slot named SpecialSlot*.</param>
 internal sealed record CloneDef(
     string Name,
     string SourceName,
@@ -37,7 +44,9 @@ internal sealed record CloneDef(
     string? PresetId,
     bool ShareMastery,
     bool ReplicateFilters,
-    OfferDef[] Offers);
+    OfferDef[] Offers,
+    bool IsVariant = true,
+    bool AddToSpecialSlots = false);
 
 /// <summary>Fixed ids and the clone list. Item and preset ids must match the JSON under db/.</summary>
 internal static class Ids
@@ -45,6 +54,10 @@ internal static class Ids
     public const string Sr25 = "5df8ce05b11454561e39243b";
     public const string ModSr25 = "6adb4485f8053e5cbd898d23";
     public const string ModSr25Preset = "6af31c1282f53f3fe42b025a";
+
+    public const string Roubles = "5449016a4bdc2d6f028b456f";
+    public const string Usd = "5696686a4bdc2da3298b456a";
+    public const string Eur = "569668774bdc2da2298b4568";
 
     public const string Peacekeeper = "5935c25fb3acc3127c3d8cd9";
     public const string Jaeger = "5c0647fdd443bc2504c2d371";
@@ -69,6 +82,9 @@ internal static class Ids
 
     public const string X47 = "5cfe8010d7ad1a59283b14c6";
     public const string ModX47 = "6ab1ba9faeb1d2b546b88b50";
+
+    public const string DogtagCase = "5c093e3486f77430cb02e593";
+    public const string SpecOpsCase = "f39e1020a6eb538f07653b87";
 }
 
 internal static class Clones
@@ -139,5 +155,10 @@ internal static class Clones
             new(Ids.NatoQuartermaster, 1, ["6a5f7d23e728fd472d2171be"], 6, OwnPriceTrader: Ids.NatoQuartermaster,
                 FallbackPriceTrader: Ids.Mechanic, FallbackFactor: 1.25, Optional: true),
         ]),
+        // New item reusing the dogtag case model: no quests, bots, filters or mastery of the source. Placed in special slots.
+        new("Spec-ops kit case", "Dogtag case", Ids.DogtagCase, Ids.SpecOpsCase, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: false,
+        [
+            new(Ids.NatoQuartermaster, 1, ["2ca535e7b954eb436c4d78a6"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
+        ], IsVariant: false, AddToSpecialSlots: true),
     ];
 }

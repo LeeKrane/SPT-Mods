@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>krane.ItemTweaks</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Comfort.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/ItemComponent.Types.dll" Private="false" />
+  </ItemGroup>
+</Project>

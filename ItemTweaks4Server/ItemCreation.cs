@@ -6,7 +6,7 @@ using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Tables;
 
-namespace ModWeapons;
+namespace ItemTweaks4Server;
 
 /// <summary>
 /// Creates every clone in <see cref="Clones.All"/> (item, default preset, handbook and flea price) through WTT-ServerCommonLib
@@ -15,8 +15,8 @@ namespace ModWeapons;
 /// exist (optional mod missing) is skipped with a log line; the others still load.
 /// </summary>
 [Injectable(TypePriority = OnLoadOrder.Preload + 10)]
-public sealed class ModWeaponItems(
-    ILogger<ModWeaponItems> logger,
+public sealed class ItemCreation(
+    ILogger<ItemCreation> logger,
     WTTServerCommonLib.WTTServerCommonLib wttCommon,
     TemplateTable templateTable,
     GlobalTable globalTable) : IOnLoad
@@ -34,9 +34,9 @@ public sealed class ModWeaponItems(
                 foreach (var def in missing)
                 {
                     if (def.SourceMod != null)
-                        logger.LogInformation("[ModWeapons] {Mod} item {Source} ({Tpl}) not found, skipping {Name}", def.SourceMod, def.SourceName, def.SourceTpl, def.Name);
+                        logger.LogInformation("[ItemTweaks4Server] {Mod} item {Source} ({Tpl}) not found, skipping {Name}", def.SourceMod, def.SourceName, def.SourceTpl, def.Name);
                     else
-                        logger.LogError("[ModWeapons] Source item {Source} ({Tpl}) not found, {Name} skipped", def.SourceName, def.SourceTpl, def.Name);
+                        logger.LogError("[ItemTweaks4Server] Source item {Source} ({Tpl}) not found, {Name} skipped", def.SourceName, def.SourceTpl, def.Name);
                 }
                 if (missing.Count > 0) continue;
 
@@ -45,7 +45,7 @@ public sealed class ModWeaponItems(
             }
             catch (Exception e)
             {
-                logger.LogError("[ModWeapons] Item creation in {Dir} failed: {Error}", group.Key, e);
+                logger.LogError("[ItemTweaks4Server] Item creation in {Dir} failed: {Error}", group.Key, e);
             }
         }
     }
@@ -55,7 +55,7 @@ public sealed class ModWeaponItems(
         var newId = new MongoId(def.CloneTpl);
         if (!templateTable.Items.TryGetValue(newId, out var item))
         {
-            logger.LogError("[ModWeapons] Item {Id} ({Name}) was not created (see WTT errors above), skipped", def.CloneTpl, def.Name);
+            logger.LogError("[ItemTweaks4Server] Item {Id} ({Name}) was not created (see WTT errors above), skipped", def.CloneTpl, def.Name);
             return;
         }
 
@@ -72,10 +72,10 @@ public sealed class ModWeaponItems(
             cartridge.Parent = newId;
 
         if (def.PresetId != null && !globalTable.ItemPresets.ContainsKey(new MongoId(def.PresetId)))
-            logger.LogWarning("[ModWeapons] Default preset {Id} of {Name} missing, flea offers will lack attachments", def.PresetId, def.Name);
+            logger.LogWarning("[ItemTweaks4Server] Default preset {Id} of {Name} missing, flea offers will lack attachments", def.PresetId, def.Name);
 
         if (def.ShareMastery) ShareMastery(def);
-        logger.LogInformation("[ModWeapons] Created {Name} ({Slots} slots)", def.Name, slots);
+        logger.LogInformation("[ItemTweaks4Server] Created {Name} ({Slots} slots)", def.Name, slots);
     }
 
     private void ShareMastery(CloneDef def)
@@ -92,6 +92,6 @@ public sealed class ModWeaponItems(
             shared++;
         }
         if (shared == 0)
-            logger.LogWarning("[ModWeapons] No mastery entry contains {Source}, {Name} has no mastery", def.SourceName, def.Name);
+            logger.LogWarning("[ItemTweaks4Server] No mastery entry contains {Source}, {Name} has no mastery", def.SourceName, def.Name);
     }
 }

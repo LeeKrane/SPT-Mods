@@ -3,12 +3,12 @@ using SemanticVersioning;
 using Range = SemanticVersioning.Range;
 using Version = SemanticVersioning.Version;
 
-namespace ModWeapons;
+namespace ItemTweaks4Server;
 
 public record ModMetadata : IModMetadata
 {
-    public string ModGuid { get; init; } = "krane.modweapons";
-    public string Name { get; init; } = "ModWeapons";
+    public string ModGuid { get; init; } = "krane.itemtweaks4server";
+    public string Name { get; init; } = "ItemTweaks4Server";
     public string Author { get; init; } = "krane";
     public List<string>? Contributors { get; init; }
     public Version Version { get; init; } = new("1.0.0");

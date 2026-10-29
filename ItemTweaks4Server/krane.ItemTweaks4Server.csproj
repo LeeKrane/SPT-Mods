@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>krane.ModWeapons</AssemblyName>
-    <RootNamespace>ModWeapons</RootNamespace>
+    <AssemblyName>krane.ItemTweaks4Server</AssemblyName>
+    <RootNamespace>ItemTweaks4Server</RootNamespace>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)../ServerMod.props" />

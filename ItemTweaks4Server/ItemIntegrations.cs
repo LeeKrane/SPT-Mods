@@ -9,7 +9,7 @@ using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Utils.Json;
 
-namespace ModWeapons;
+namespace ItemTweaks4Server;
 
 /// <summary>
 /// Quests, bots (database and Progressive Bot System pools), slot filters and trader offers of every created clone. TypePriority sits after
@@ -17,8 +17,8 @@ namespace ModWeapons;
 /// RagfairCallbacks and PresetCallbacks so flea trader offers and presets pick everything up.
 /// </summary>
 [Injectable(TypePriority = OnLoadOrder.TraderRegistration + 10)]
-public sealed class ModWeaponIntegrations(
-    ILogger<ModWeaponIntegrations> logger,
+public sealed class ItemIntegrations(
+    ILogger<ItemIntegrations> logger,
     TemplateTable templateTable,
     GlobalTable globalTable,
     BotTable botTable,
@@ -38,14 +38,18 @@ public sealed class ModWeaponIntegrations(
             if (!templateTable.Items.ContainsKey(new MongoId(def.CloneTpl)))
             {
                 // Items step already logged why (missing optional source or a WTT error).
-                logger.LogInformation("[ModWeapons] {Name} not created, quests, bots, filters and traders skipped", def.Name);
+                logger.LogInformation("[ItemTweaks4Server] {Name} not created, quests, bots, filters and traders skipped", def.Name);
                 continue;
             }
 
-            Guard($"{def.Name} quests", () => AddToQuests(def));
-            Guard($"{def.Name} bots", () => AddToBots(def));
-            Guard($"{def.Name} Progressive Bot System", () => AddToApbs(def));
-            if (def.ReplicateFilters) Guard($"{def.Name} slot filters", () => AddToFilters(def));
+            if (def.IsVariant)
+            {
+                Guard($"{def.Name} quests", () => AddToQuests(def));
+                Guard($"{def.Name} bots", () => AddToBots(def));
+                Guard($"{def.Name} Progressive Bot System", () => AddToApbs(def));
+                if (def.ReplicateFilters) Guard($"{def.Name} slot filters", () => AddToFilters(def));
+            }
+            if (def.AddToSpecialSlots) Guard($"{def.Name} special slots", () => AddToSpecialSlots(def));
             foreach (var offer in def.Offers)
                 Guard($"{def.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
         }
@@ -55,7 +59,7 @@ public sealed class ModWeaponIntegrations(
     private void Guard(string what, Action action)
     {
         try { action(); }
-        catch (Exception e) { logger.LogError("[ModWeapons] {What} failed: {Error}", what, e); }
+        catch (Exception e) { logger.LogError("[ItemTweaks4Server] {What} failed: {Error}", what, e); }
     }
 
     // ---- Slot filters ----------------------------------------------------------------------------
@@ -64,30 +68,54 @@ public sealed class ModWeaponIntegrations(
     private void AddToFilters(CloneDef def)
     {
         var source = new MongoId(def.SourceTpl);
+        var (filters, items) = AddToSets(def, props =>
+        {
+            // Grid exclusions and conflicts too, so the clone is kept out wherever the source is.
+            var sets = SlotFilterSets(AllSlots(props)).ToList();
+            foreach (var grid in props.Grids ?? [])
+                sets.AddRange((grid.Properties?.Filters ?? []).SelectMany(f => new[] { f.Filter, f.ExcludedFilter }).OfType<HashSet<MongoId>>());
+            if (props.ConflictingItems != null) sets.Add(props.ConflictingItems);
+            return sets;
+        }, set => set.Contains(source));
+        logger.LogInformation("[ItemTweaks4Server] Added {Name} to {Filters} slot/cartridge/grid filter, exclusion or conflict list(s) of {Items} item(s)", def.Name, filters, items);
+    }
+
+    /// <summary>
+    /// Special slots (pockets) list their allowed items one by one, so a new item has to be added to each slot named SpecialSlot*.
+    /// Done here, after every mod has registered its items, so pockets added by other mods are covered too (WTT's own
+    /// addtoSpecialSlots only knows two fixed pockets and adds to every slot of them, see README).
+    /// </summary>
+    private void AddToSpecialSlots(CloneDef def)
+    {
+        var (filters, items) = AddToSets(def,
+            props => SlotFilterSets((props.Slots ?? []).Where(s => s.Name != null && s.Name.StartsWith("SpecialSlot", StringComparison.Ordinal))),
+            _ => true);
+        logger.LogInformation("[ItemTweaks4Server] Added {Name} to {Filters} special slot filter(s) of {Items} item(s)", def.Name, filters, items);
+    }
+
+    private static IEnumerable<Slot> AllSlots(TemplateItemProperties props) =>
+        (props.Slots ?? []).Concat(props.Chambers ?? []).Concat(props.Cartridges ?? []);
+
+    private static IEnumerable<HashSet<MongoId>> SlotFilterSets(IEnumerable<Slot> slots) =>
+        slots.SelectMany(s => s.Properties?.Filters ?? []).Select(f => f.Filter).OfType<HashSet<MongoId>>();
+
+    /// <summary>Shared walk over every template: adds the clone to each set picked by <paramref name="pick"/> that passes <paramref name="match"/>.</summary>
+    private (int Filters, int Items) AddToSets(CloneDef def, Func<TemplateItemProperties, IEnumerable<HashSet<MongoId>>> pick, Func<HashSet<MongoId>, bool> match)
+    {
         var clone = new MongoId(def.CloneTpl);
         var filters = 0;
         var items = 0;
         foreach (var item in templateTable.Items.Values)
         {
-            var props = item.Properties;
-            if (props == null) continue;
+            if (item.Properties == null) continue;
             var before = filters;
-
-            var sets = new List<HashSet<MongoId>?>();
-            // Grid exclusions and conflicts too, so the clone is kept out wherever the source is.
-            foreach (var slot in (props.Slots ?? []).Concat(props.Chambers ?? []).Concat(props.Cartridges ?? []))
-                sets.AddRange((slot.Properties?.Filters ?? []).Select(f => f.Filter));
-            foreach (var grid in props.Grids ?? [])
-                sets.AddRange((grid.Properties?.Filters ?? []).SelectMany(f => new[] { f.Filter, f.ExcludedFilter }));
-            sets.Add(props.ConflictingItems);
-
-            foreach (var set in sets)
+            foreach (var set in pick(item.Properties))
             {
-                if (set != null && set.Contains(source) && set.Add(clone)) filters++;
+                if (match(set) && set.Add(clone)) filters++;
             }
             if (filters > before) items++;
         }
-        logger.LogInformation("[ModWeapons] Added {Name} to {Filters} slot/cartridge/grid filter, exclusion or conflict list(s) of {Items} item(s)", def.Name, filters, items);
+        return (filters, items);
     }
 
     // ---- Quests ----------------------------------------------------------------------------------
@@ -129,7 +157,7 @@ public sealed class ModWeaponIntegrations(
             }
             if (added > before) quests++;
         }
-        logger.LogInformation("[ModWeapons] Added {Name} to {Count} quest condition(s) across {Quests} quest(s)", def.Name, added, quests);
+        logger.LogInformation("[ItemTweaks4Server] Added {Name} to {Count} quest condition(s) across {Quests} quest(s)", def.Name, added, quests);
     }
 
     // ---- Bots ------------------------------------------------------------------------------------
@@ -159,7 +187,7 @@ public sealed class ModWeaponIntegrations(
             modSets += AddToModSets(inventory.Mods, def);
             if (pools + modEntries + modSets > before) bots++;
         }
-        logger.LogInformation("[ModWeapons] Added {Name} to {Pools} bot weapon/loot pool(s), {Mods} mod pool(s) and {Sets} mod slot choice(s) across {Bots} bot type(s)",
+        logger.LogInformation("[ItemTweaks4Server] Added {Name} to {Pools} bot weapon/loot pool(s), {Mods} mod pool(s) and {Sets} mod slot choice(s) across {Bots} bot type(s)",
             def.Name, pools, modEntries, modSets, bots);
     }
 
@@ -213,7 +241,7 @@ public sealed class ModWeaponIntegrations(
         var loaderType = apbsLoaderType.Value;
         if (loaderType == null || services.GetService(loaderType) is not { } loader)
         {
-            logger.LogInformation("[ModWeapons] Progressive Bot System not installed, skipping its bot pools for {Name}", def.Name);
+            logger.LogInformation("[ItemTweaks4Server] Progressive Bot System not installed, skipping its bot pools for {Name}", def.Name);
             return;
         }
 
@@ -242,7 +270,7 @@ public sealed class ModWeaponIntegrations(
                 modSets += AddToModSets(mods, def);
             }
         }
-        logger.LogInformation("[ModWeapons] Added {Name} to {Pools} Progressive Bot System weapon pool(s), {Mods} mod pool(s) and {Sets} mod slot choice(s)",
+        logger.LogInformation("[ItemTweaks4Server] Added {Name} to {Pools} Progressive Bot System weapon pool(s), {Mods} mod pool(s) and {Sets} mod slot choice(s)",
             def.Name, pools, modEntries, modSets);
     }
 
@@ -252,6 +280,7 @@ public sealed class ModWeaponIntegrations(
     private double ResolvePrice(CloneDef def, OfferDef offer)
     {
         if (offer.FixedPrice is { } fixedPrice) return fixedPrice;
+        if (offer.CurrencyTpl != Ids.Roubles) throw new InvalidOperationException($"{def.Name}: a non-rouble offer needs a FixedPrice");
 
         if (offer.OwnPriceTrader != null && TryReadOfferRoubles(def, offer.OwnPriceTrader) * 2 is > 0 and var own)
             return Math.Round(own);
@@ -263,7 +292,7 @@ public sealed class ModWeaponIntegrations(
             if (TryReadOfferRoubles(def, offer.FallbackPriceTrader) * 2 is > 0 and var other)
             {
                 var price = Math.Round(other * factor);
-                logger.LogInformation("[ModWeapons] {Trader} has no {Source} offer, its offer uses 2x the {Other} price times {Factor}: {Price} RUB",
+                logger.LogInformation("[ItemTweaks4Server] {Trader} has no {Source} offer, its offer uses 2x the {Other} price times {Factor}: {Price} RUB",
                     offer.TraderName, def.SourceName, Ids.TraderNames[offer.FallbackPriceTrader], factor, price);
                 return price;
             }
@@ -271,7 +300,7 @@ public sealed class ModWeaponIntegrations(
 
         // Fallback: 2x source handbook price (the same as the clone's own handbook price for 2x clones).
         var fallback = Math.Round(2 * handbookHelper.GetTemplatePrice(new MongoId(def.SourceTpl)) * factor);
-        logger.LogWarning("[ModWeapons] {Source} price at {PriceTrader} not found, {Trader} offer for {Name} uses fallback {Price} RUB",
+        logger.LogWarning("[ItemTweaks4Server] {Source} price at {PriceTrader} not found, {Trader} offer for {Name} uses fallback {Price} RUB",
             def.SourceName, Ids.TraderNames[offer.FallbackPriceTrader ?? offer.OwnPriceTrader ?? offer.TraderId], offer.TraderName, def.Name, fallback);
         return fallback;
     }
@@ -292,7 +321,7 @@ public sealed class ModWeaponIntegrations(
         {
             if (entry.Count is not { } count || !Money.GetMoneyTpls().Contains(entry.Template))
             {
-                logger.LogWarning("[ModWeapons] {Trader} sells {Source} for a non-currency barter, cannot derive a price", Ids.TraderNames[traderId], def.SourceName);
+                logger.LogWarning("[ItemTweaks4Server] {Trader} sells {Source} for a non-currency barter, cannot derive a price", Ids.TraderNames[traderId], def.SourceName);
                 return null;
             }
             total += entry.Template == Money.ROUBLES ? count : handbookHelper.InRoubles(count, entry.Template);
@@ -310,9 +339,9 @@ public sealed class ModWeaponIntegrations(
         if (!tradersTable.TryGetValue(new MongoId(offer.TraderId), out var trader) || trader.Assort == null)
         {
             if (offer.Optional)
-                logger.LogInformation("[ModWeapons] {Trader} not installed, skipping its {Name} offer", offer.TraderName, def.Name);
+                logger.LogInformation("[ItemTweaks4Server] {Trader} not installed, skipping its {Name} offer", offer.TraderName, def.Name);
             else
-                logger.LogWarning("[ModWeapons] Trader {Trader} not found, {Name} offer skipped", offer.TraderName, def.Name);
+                logger.LogWarning("[ItemTweaks4Server] Trader {Trader} not found, {Name} offer skipped", offer.TraderName, def.Name);
             return;
         }
 
@@ -323,7 +352,7 @@ public sealed class ModWeaponIntegrations(
             parts = preset.Items;
         else
         {
-            logger.LogWarning("[ModWeapons] Default preset of {Name} missing or not {Count} parts, {Trader} offer skipped", def.Name, offer.AssortIds.Length, offer.TraderName);
+            logger.LogWarning("[ItemTweaks4Server] Default preset of {Name} missing or not {Count} parts, {Trader} offer skipped", def.Name, offer.AssortIds.Length, offer.TraderName);
             return;
         }
 
@@ -342,7 +371,7 @@ public sealed class ModWeaponIntegrations(
             string? parentAssortId = null;
             if (!isRoot && (src.ParentId == null || !idByPresetItem.TryGetValue(new MongoId(src.ParentId), out parentAssortId)))
             {
-                logger.LogWarning("[ModWeapons] Default preset of {Name} is malformed, {Trader} offer skipped", def.Name, offer.TraderName);
+                logger.LogWarning("[ItemTweaks4Server] Default preset of {Name} is malformed, {Trader} offer skipped", def.Name, offer.TraderName);
                 return;
             }
             items.Add(new Item
@@ -359,8 +388,8 @@ public sealed class ModWeaponIntegrations(
 
         var price = ResolvePrice(def, offer);
         trader.Assort.Items.AddRange(items);
-        trader.Assort.BarterScheme[rootId] = [[new BarterScheme { Count = price, Template = Money.ROUBLES }]];
+        trader.Assort.BarterScheme[rootId] = [[new BarterScheme { Count = price, Template = offer.CurrencyTpl }]];
         trader.Assort.LoyalLevelItems[rootId] = offer.LoyaltyLevel;
-        logger.LogInformation("[ModWeapons] {Trader}: {Name} at LL{Level} for {Price} RUB, {Limit} per restock", offer.TraderName, def.Name, offer.LoyaltyLevel, price, offer.Limit);
+        logger.LogInformation("[ItemTweaks4Server] {Trader}: {Name} at LL{Level} for {Price} {Currency}, {Limit} per restock", offer.TraderName, def.Name, offer.LoyaltyLevel, price, offer.CurrencyName, offer.Limit);
     }
 }
