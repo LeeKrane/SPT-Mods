@@ -60,10 +60,24 @@ namespace Krane.ItemTweaks
             Patch(harmony, AccessTools.Method(typeof(ItemContextInteractionsSwitcher), nameof(ItemContextInteractionsSwitcher.IsActive), new[] { typeof(EItemInfoButton) }),
                 postfix: nameof(IsActivePostfix));
             Patch(harmony, AccessTools.Method(typeof(ItemUiContext), nameof(ItemUiContext.OpenRepairWindow)), prefix: nameof(OpenRepairWindowPrefix));
-            Patch(harmony, AccessTools.Method(typeof(RepairController), nameof(RepairController.FormRepairKitsCollection)), prefix: nameof(FormKitsPrefix));
-            Patch(harmony, AccessTools.Method(typeof(RepairController), nameof(RepairController.GetBaseRepairPriceCoefficient)), prefix: nameof(PriceCoefficientPrefix));
             Patch(harmony, AccessTools.Method(typeof(RepairerParametersPanel), nameof(RepairerParametersPanel.AddRepairKit)), prefix: nameof(AddRepairKitPrefix));
             Patch(harmony, AccessTools.Method(typeof(RepairKitsCollection), nameof(RepairKitsCollection.RepairItems)), prefix: nameof(RepairItemsPrefix));
+            _harmony = harmony;
+        }
+
+        private static Harmony _harmony;
+        private static bool _controllerPatched;
+
+        // Patching a RepairController method JIT-compiles it, which runs RepairController's static constructor. At
+        // plugin load that throws (game singletons not ready) and leaves the type broken for the session, so the
+        // profile never finishes loading. Patch it on the first in-raid repair window instead, long after the
+        // session has initialized the type normally.
+        private static void EnsureControllerPatches()
+        {
+            if (_controllerPatched) return;
+            _controllerPatched = true;
+            Patch(_harmony, AccessTools.Method(typeof(RepairController), nameof(RepairController.FormRepairKitsCollection)), prefix: nameof(FormKitsPrefix));
+            Patch(_harmony, AccessTools.Method(typeof(RepairController), nameof(RepairController.GetBaseRepairPriceCoefficient)), prefix: nameof(PriceCoefficientPrefix));
         }
 
         private static void Patch(Harmony harmony, MethodInfo target, string prefix = null, string postfix = null)
@@ -179,6 +193,7 @@ namespace Krane.ItemTweaks
             if (!Active) return;
             try
             {
+                EnsureControllerPatches();
                 repairController = GetController();
             }
             catch (Exception e)
