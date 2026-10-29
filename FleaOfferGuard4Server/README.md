@@ -22,7 +22,7 @@ Harmony patches (same mechanism as AishiInsuranceDiscount4Server):
 If patching fails, any patch already applied is removed, a warning is logged and the server still loads, without protection.
 
 ## Build and deploy
-The server runs on taragarmr. The net10/SDK 8 fallback and the SPT references live in the shared `ServerMod.props` at the repo root, imported by each server mod's csproj. Build with `-c Release` (needs the .NET 10 SDK, or SDK 8 plus a dotnet root holding the .NET 10 shared runtimes via `DOTNET_ROOT` or `-p:DotnetRoot=...`), then `scripts/deploy-server-mod.sh FleaOfferGuard4Server` and `scripts/restart-all.sh`.
+The server runs on taragarmr. The net10/SDK 8 fallback and the SPT references live in the shared `ServerMod.props` at the repo root, imported by each server mod's csproj. Build with `-c Release` (needs the .NET 10 SDK, or SDK 8 plus a dotnet root holding the .NET 10 shared runtimes via `DOTNET_ROOT` or `-p:DotnetRoot=...`), then `scripts/deploy-server-mod.sh FleaOfferGuard4Server`. It takes effect on the next server restart.
 
 ## Settings
 None. There is no `config.json`: rejecting invalid prices is always on.

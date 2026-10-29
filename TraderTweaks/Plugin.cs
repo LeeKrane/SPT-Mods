@@ -36,7 +36,7 @@ namespace Krane.TraderTweaks
             new Harmony("krane.tradertweaks").PatchAll(typeof(AvailablePatch).Assembly);
         }
 
-        private static readonly FieldInfo TraderField = AccessTools.Field(typeof(TraderCard), "_trader");
+        internal static readonly FieldInfo TraderField = AccessTools.Field(typeof(TraderCard), "_trader");
 
         private static void RefreshCards()
         {
@@ -71,13 +71,11 @@ namespace Krane.TraderTweaks
     [HarmonyPatch(typeof(TraderCard), nameof(TraderCard.SetCardState))]
     internal static class SetCardStatePatch
     {
-        private static readonly FieldInfo TraderField = AccessTools.Field(typeof(TraderCard), "_trader");
-
         [HarmonyPostfix]
         private static void Postfix(TraderCard __instance)
         {
-            var info = TraderField?.GetValue(__instance) as EFT.Profile.TraderInfo;
-            if (info != null && info.Id == Plugin.HarryId && !info.Available)
+            var info = Plugin.TraderField?.GetValue(__instance) as EFT.Profile.TraderInfo;
+            if (Plugin.DisableHarry.Value && info != null && info.Id == Plugin.HarryId && !info.Available)
             {
                 __instance.ApplyState(TraderCard.ETraderCardState.Locked);
             }
