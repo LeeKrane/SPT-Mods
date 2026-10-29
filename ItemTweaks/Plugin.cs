@@ -70,14 +70,18 @@ namespace Krane.ItemTweaks
         }
 
         // One failing patch target must not stop the other features.
-        internal static void SafePatch(Harmony harmony, Type owner, MethodBase target, string prefix = null, string postfix = null)
+        internal static void SafePatch(Harmony harmony, Type owner, MethodBase target, string prefix = null, string postfix = null, int? priority = null)
         {
             try
             {
                 if (target == null) throw new MissingMethodException("patch target not found for " + (prefix ?? postfix));
-                harmony.Patch(target,
-                    prefix: prefix == null ? null : new HarmonyMethod(owner, prefix),
-                    postfix: postfix == null ? null : new HarmonyMethod(owner, postfix));
+                HarmonyMethod Make(string name)
+                {
+                    var m = new HarmonyMethod(owner, name);
+                    if (priority.HasValue) m.priority = priority.Value;
+                    return m;
+                }
+                harmony.Patch(target, prefix: prefix == null ? null : Make(prefix), postfix: postfix == null ? null : Make(postfix));
             }
             catch (Exception e)
             {

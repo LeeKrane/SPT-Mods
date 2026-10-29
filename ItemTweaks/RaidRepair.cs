@@ -18,7 +18,11 @@
 //  (RepairableComponent.RepairKitDegradation = armor material or template values, as the server's repair helper uses);
 //  durability above the new max is clamped; face shield hits reset; common/rare buff roll (config values of repair.json).
 // Amount repaired = what the client repair UI would offer: MaxDurability - minimum expected kit degradation - Durability.
-// Not mirrored: skill XP gain and the elite Charisma 50% no-wear roll.
+// Elite Charisma: like RepairService.ShouldRepairKitApplyDurabilityLoss, each repaired item has a 50% chance to take no max
+// durability loss (rolled before the amount is computed, so the kit is not wasted). The client's skill-based
+// HasEliteNoWearRepair is not used: the server ignores it for kit repairs. Not mirrored: skill XP gain.
+// Targets: the item itself; for armor also the items in its slots, recursively (plates, inserts, visors), never items
+// stored in its grids (armored rig pockets). Kits are collected once, planning covers all targets before anything is mutated.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,21 +56,25 @@ namespace Krane.ItemTweaks
                 postfix: nameof(IsActivePostfix));
             Patch(harmony, AccessTools.Method(typeof(ItemUiContext), nameof(ItemUiContext.OpenRepairWindow)), prefix: nameof(OpenRepairWindowPrefix));
 
-            // Run after other mods' postfixes (UIFixes turns Repair into a trader submenu in this same getter).
-            try
+            // Run after other mods' postfixes (UIFixes turns Repair into a trader submenu in this same getter). The getter is
+            // virtual: patch the base declaration and any subclass that overrides it (none in 4.1.6, checked by name).
+            var baseType = typeof(BaseInventoryItemContextInteractions);
+            var types = new List<Type> { baseType };
+            try { types.AddRange(baseType.Assembly.GetTypes().Where(t => t.IsSubclassOf(baseType))); }
+            catch (ReflectionTypeLoadException e) { types.AddRange(e.Types.Where(t => t != null && t.IsSubclassOf(baseType))); }
+            bool any = false;
+            foreach (Type t in types)
             {
-                var getter = AccessTools.DeclaredProperty(typeof(BaseInventoryItemContextInteractions), nameof(BaseInventoryItemContextInteractions.SubInteractions))?.GetMethod;
-                if (getter == null) throw new MissingMethodException("BaseInventoryItemContextInteractions.SubInteractions getter");
-                harmony.Patch(getter, postfix: new HarmonyMethod(typeof(RaidRepair), nameof(SubInteractionsPostfix)) { priority = Priority.Last });
+                var getter = AccessTools.DeclaredProperty(t, nameof(BaseInventoryItemContextInteractions.SubInteractions))?.GetMethod;
+                if (getter == null) continue;
+                any = true;
+                Patch(harmony, getter, postfix: nameof(SubInteractionsPostfix), priority: Priority.Last);
             }
-            catch (Exception e)
-            {
-                Plugin.Log.LogError(e);
-            }
+            if (!any) Plugin.Log.LogError("BaseInventoryItemContextInteractions.SubInteractions getter not found");
         }
 
-        private static void Patch(Harmony harmony, MethodInfo target, string prefix = null, string postfix = null)
-            => Plugin.SafePatch(harmony, typeof(RaidRepair), target, prefix, postfix);
+        private static void Patch(Harmony harmony, MethodInfo target, string prefix = null, string postfix = null, int? priority = null)
+            => Plugin.SafePatch(harmony, typeof(RaidRepair), target, prefix, postfix, priority);
 
         // Setting on, a raid is running and we have a local player. InGameStatus.InRaid is what vanilla's Gameplay check reads.
         internal static bool Active
@@ -97,24 +105,70 @@ namespace Krane.ItemTweaks
             return item != null && eq != null && item.IsChildOf(eq);
         }
 
-        private static IEnumerable<RepairKit> KitsInEquipment()
+        private const float KitEpsilon = 0.01f;
+
+        private static List<RepairKit> KitsInEquipment()
         {
             var eq = Equipment;
-            if (eq == null) return Enumerable.Empty<RepairKit>();
-            return eq.GetAllItems().OfType<RepairKit>();
+            if (eq == null) return new List<RepairKit>();
+            return eq.GetAllItems().OfType<RepairKit>().ToList();
         }
 
-        private static bool KitCanRepairTree(RepairKit kit, Item item)
+        private static bool KitUsable(RepairKit kit)
+            => kit.Resource >= KitEpsilon && kit.PinLockState != EItemPinLockState.Locked && InEquipment(kit) && RaidProfile.Examined(kit);
+
+        // What vanilla repairs for this item: the item itself; armor (ArmorRepairStrategy) also everything merged into it through
+        // its slots (plates, inserts, visors, nested), in vanilla order. Grid contents (armored rig pockets) are never targets.
+        private static List<Item> RepairTargets(Item item)
         {
-            if (kit.CanRepair(item)) return true;
-            return item.GetItemComponentsInChildren<RepairableComponent>().Any(c => kit.CanRepair(c.Item));
+            var list = new List<Item>();
+            if (item.GetItemComponent<ArmorHolderComponent>() == null)
+            {
+                if (item.GetItemComponent<RepairableComponent>() != null) list.Add(item);
+                return list;
+            }
+            CollectSlotItems(item, list);
+            return list.OrderBy(OrderRepair).ToList();
         }
 
-        private static bool KitUsable(RepairKit kit) => kit.Resource > 0f && kit.PinLockState != EItemPinLockState.Locked && InEquipment(kit);
+        private static void CollectSlotItems(Item item, List<Item> list)
+        {
+            if (item.GetItemComponent<RepairableComponent>() != null) list.Add(item);
+            if (item is not CompoundItem compound || compound.Slots == null) return;
+            foreach (Slot slot in compound.Slots)
+            {
+                Item contained = slot?.ContainedItem;
+                if (contained != null) CollectSlotItems(contained, list);
+            }
+        }
+
+        // ArmorRepairStrategy.OrderRepair
+        private static readonly EBodyPartColliderType[] ColliderOrder =
+        {
+            EBodyPartColliderType.HeadCommon, EBodyPartColliderType.ParietalHead, EBodyPartColliderType.Eyes, EBodyPartColliderType.Jaw,
+            EBodyPartColliderType.RibcageUp, EBodyPartColliderType.RibcageLow, EBodyPartColliderType.BackHead, EBodyPartColliderType.Ears,
+            EBodyPartColliderType.NeckFront, EBodyPartColliderType.SpineTop, EBodyPartColliderType.SpineDown, EBodyPartColliderType.NeckBack,
+            EBodyPartColliderType.Pelvis, EBodyPartColliderType.PelvisBack, EBodyPartColliderType.RightSideChestUp, EBodyPartColliderType.LeftSideChestUp,
+            EBodyPartColliderType.RightSideChestDown, EBodyPartColliderType.LeftSideChestDown, EBodyPartColliderType.RightUpperArm, EBodyPartColliderType.LeftUpperArm,
+            EBodyPartColliderType.RightForearm, EBodyPartColliderType.LeftForearm, EBodyPartColliderType.RightThigh, EBodyPartColliderType.LeftThigh,
+            EBodyPartColliderType.RightCalf, EBodyPartColliderType.LeftCalf,
+        };
+
+        private static int OrderRepair(Item item)
+        {
+            if (!item.TryGetItemComponent<ArmorComponent>(out var armor)) return 0;
+            if (item.CurrentAddress is SlotItemAddress addr && !addr.Slot.Locked) return -100;
+            foreach (var collider in armor.ArmorColliders)
+            {
+                int i = Array.IndexOf(ColliderOrder, collider);
+                if (i >= 0) return -30 + i;
+            }
+            return 0;
+        }
 
         // Only used for its pure formula methods (repair price/quality, skill buff chance). The real constructor needs an
-        // IEftSession (trader repairers), which does not exist in raid, so build the object without it and fill the fields
-        // those methods read.
+        // IEftSession (trader repairers), which does not exist in raid, so build the object without it and fill every field
+        // the called methods (and the rest of the non-session API) read.
         private static RepairController GetController()
         {
             var profile = RaidProfile;
@@ -124,7 +178,9 @@ namespace Krane.ItemTweaks
             var c = (RepairController)FormatterServices.GetUninitializedObject(typeof(RepairController));
             var skills = profile.Skills;
             c._profile = profile;
+            c._profileInventory = profile.Inventory;
             c._skillManager = skills;
+            c._preallocatedRepairKits = new List<RepairKit>();
             c._lightVestRepairParameters = new RepairController.RepairParameters(skills, EBonusType.UnlockArmorRepair, EBonusType.RepairArmorBonus, ESkillId.LightVests,
                 RepairController.LightVestWearChanceReducePerLevel, RepairController.SkillsSettings.LightVests.BuffSettings, skills.LightVestDeteriorationChanceOnRepairReduce);
             c._heavyVestRepairParameters = new RepairController.RepairParameters(skills, EBonusType.UnlockArmorRepair, EBonusType.RepairArmorBonus, ESkillId.HeavyVests,
@@ -147,18 +203,15 @@ namespace Krane.ItemTweaks
                 Item item = __instance._item;
                 if (item == null || !item.ItemInteractionButtons.Contains(button)) return;
                 if (__instance.BadContextType || !__instance.Examined || !InEquipment(item)) return;
-                if (!item.GetItemComponentsInChildren<RepairableComponent>().Any()) return;
+                List<Item> targets = RepairTargets(item);
+                if (targets.Count == 0) return;
                 if (__instance._itemContext is RepairItemContext ctx)
                 {
                     RepairKit kit = ctx.RepairKit;
-                    if (kit == null || !KitUsable(kit)) return;
-                    if (!__instance._itemController.Examined(kit) || !__instance.CanRepair(ctx, item)) return;
+                    if (kit == null || !KitUsable(kit) || !__instance._itemController.Examined(kit)) return;
+                    if (!targets.Any(kit.CanRepair)) return;
                 }
-                else
-                {
-                    var profile = RaidProfile;
-                    if (!KitsInEquipment().Any(k => KitUsable(k) && profile.Examined(k) && KitCanRepairTree(k, item))) return;
-                }
+                else if (!KitsInEquipment().Any(k => KitUsable(k) && targets.Any(k.CanRepair))) return;
                 __result = true;
             }
             catch (Exception e)
@@ -175,12 +228,13 @@ namespace Krane.ItemTweaks
         }
 
         // Both the context menu Repair and dropping a kit on an item end here. Never open the window in raid.
-        private static bool OpenRepairWindowPrefix(ItemContext itemContext)
+        // Arguments are taken by type, not by name, so a renamed parameter cannot break the patch.
+        private static bool OpenRepairWindowPrefix(object[] __args)
         {
             if (!Active) return true;
             try
             {
-                InstantRepair(itemContext);
+                InstantRepair(__args?.OfType<ItemContext>().FirstOrDefault());
             }
             catch (Exception e)
             {
@@ -190,6 +244,18 @@ namespace Krane.ItemTweaks
             return false;
         }
 
+        private sealed class Plan
+        {
+            public Item Item;
+            public RepairableComponent Repairable;
+            public float Gain, NewDurability, NewMax;
+            public bool Buffed;
+            public float BuffValue;
+            public double BuffThreshold;
+            public EBuffRarity BuffRarity;
+            public ERepairBuffType BuffType;
+        }
+
         private static void InstantRepair(ItemContext itemContext)
         {
             Item item = itemContext?.Item;
@@ -197,104 +263,127 @@ namespace Krane.ItemTweaks
             RepairKit dragged = (itemContext as RepairItemContext)?.RepairKit;
             var controller = GetController();
 
-            // Armor repairs its plates and inserts too (vanilla ArmorRepairStrategy); anything else only itself.
-            List<Item> targets = item.GetItemComponent<ArmorHolderComponent>() != null
-                ? item.GetItemComponentsInChildren<RepairableComponent>().Select(c => c.Item).Distinct().ToList()
-                : new List<Item> { item };
+            // Kits collected once: dragged first, then smallest first. `remaining` is the planned kit state.
+            List<RepairKit> kits = KitsInEquipment().Where(KitUsable).OrderBy(k => k.Resource).ToList();
+            if (dragged != null && kits.Remove(dragged)) kits.Insert(0, dragged);
+            var remaining = kits.ToDictionary(k => k, k => k.Resource);
 
+            // Plan every target first; nothing is mutated until all of them are planned.
             bool kitFound = false;
-            int repaired = 0;
-            foreach (Item target in targets)
+            var plans = new List<Plan>();
+            foreach (Item target in RepairTargets(item))
             {
                 RepairableComponent repairable = target.GetItemComponent<RepairableComponent>();
-                if (repairable == null) continue;
-                var kits = KitsInEquipment().Where(k => KitUsable(k) && k.CanRepair(target) && ProfileExamined(k)).OrderBy(k => k.Resource).ToList();
-                if (dragged != null && kits.Remove(dragged)) kits.Insert(0, dragged);
-                if (kits.Count == 0) continue;
+                var usable = kits.Where(k => remaining[k] >= KitEpsilon && k.CanRepair(target)).ToList();
+                if (repairable == null || usable.Count == 0) continue;
                 kitFound = true;
-
-                float want = WantedGain(controller, target, repairable);
-                if (want / repairable.TemplateDurability < 0.001f) continue;
-                if (ApplyLocalRepair(controller, target, repairable, kits, want)) repaired++;
+                Plan plan = PlanTarget(controller, target, repairable, usable, remaining);
+                if (plan != null) plans.Add(plan);
             }
 
-            if (repaired > 0)
-            {
-                RepairableComponent root = item.GetItemComponent<RepairableComponent>();
-                string text = "Item successfully repaired to".Localized();
-                NotificationManager.DisplayMessageNotification(root != null ? $"{text} {root.Durability:F1}" : text);
-                Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.RepairComplete);
-            }
-            else
+            if (plans.Count == 0)
             {
                 NotificationManager.DisplayWarningNotification(kitFound ? "Nothing to repair" : "No suitable repair kit");
+                return;
             }
+
+            Apply(plans, remaining);
+
+            RepairableComponent root = item.GetItemComponent<RepairableComponent>();
+            string text = "Item successfully repaired to".Localized();
+            NotificationManager.DisplayMessageNotification(root != null ? $"{text} {root.Durability:F1}" : text);
+            Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.RepairComplete);
         }
 
-        private static bool ProfileExamined(RepairKit kit) => RaidProfile.Examined(kit);
+        // Elite Charisma, RepairService.ShouldRepairKitApplyDurabilityLoss: 50% chance per item that max durability is not reduced.
+        private static bool RollNoWear()
+        {
+            Skill charisma = RaidProfile.Skills?.Charisma;
+            return charisma != null && charisma.IsEliteLevel && UnityEngine.Random.value < 0.5f;
+        }
 
-        // RepairKitsCollection.GetDegradationValues + ArmorRepairStrategy/DefaultRepairStrategy.HowMuchRepairScoresCanAccept.
-        private static float WantedGain(RepairController controller, Item target, RepairableComponent repairable)
+        // RepairKitsCollection.GetDegradationValues + ArmorRepairStrategy/DefaultRepairStrategy.HowMuchRepairScoresCanAccept,
+        // with the minimum degradation 0 only when this repair is a no-wear one.
+        private static float WantedGain(RepairController controller, Item target, RepairableComponent repairable, bool noWear)
         {
             Vector2 degradation = (target.IsArmorMod() ? 1f : (float)controller.GetBaseRepairQuality(target)) * repairable.TemplateDurability * repairable.RepairKitDegradation;
-            if (controller.HasEliteNoWearRepair(target)) degradation.x = 0f;
-            return Mathf.Max(0f, repairable.MaxDurability - degradation.x - repairable.Durability);
+            return Mathf.Max(0f, repairable.MaxDurability - (noWear ? 0f : degradation.x) - repairable.Durability);
         }
 
-        // Plans the kit spending first, nothing is mutated until everything succeeded.
-        private static bool ApplyLocalRepair(RepairController controller, Item item, RepairableComponent repairable, List<RepairKit> kits, float want)
+        // Pure: computes the result for one target and spends points in `remaining` only. Returns null when nothing to do.
+        private static Plan PlanTarget(RepairController controller, Item item, RepairableComponent repairable, List<RepairKit> kits, Dictionary<RepairKit, float> remaining)
         {
+            bool noWear = RollNoWear();
+            float want = WantedGain(controller, item, repairable, noWear);
+            if (want / repairable.TemplateDurability < 0.001f) return null;
+
             float gain = 0f;
             var spend = new List<KeyValuePair<RepairKit, float>>();
             foreach (RepairKit kit in kits)
             {
-                float remaining = want - gain;
-                if (remaining <= 0.0001f) break;
+                float left = want - gain;
+                if (left <= 0.0001f) break;
                 // Kit points per durability point: GetRepairPrice(kit, 1, item) is exactly RepairService.GetKitDivisor.
                 double divisor = controller.GetRepairPrice(kit.RepairKitTemplate, 1.0, item);
                 if (double.IsNaN(divisor) || double.IsInfinity(divisor) || divisor <= 0.0)
-                {
-                    Plugin.Log.LogError($"Raid repair aborted: invalid kit divisor {divisor} for {item.TemplateId}");
-                    return false;
-                }
-                float res = kit.Resource;
-                float take = Mathf.Min(remaining, (float)(res / divisor));
+                    throw new InvalidOperationException($"invalid kit divisor {divisor} for {item.TemplateId}");
+                float res = remaining[kit];
+                if (res < KitEpsilon) continue;
+                float take = Mathf.Min(left, (float)(res / divisor));
                 if (take <= 0f) continue;
-                spend.Add(new KeyValuePair<RepairKit, float>(kit, Mathf.Max(0f, res - (float)(take * divisor))));
+                float rest = res - (float)(take * divisor);
+                spend.Add(new KeyValuePair<RepairKit, float>(kit, rest < KitEpsilon ? 0f : rest));
                 gain += take;
             }
-            if (gain <= 0f) return false;
+            if (gain <= 0f) return null;
 
             // RepairHelper.UpdateItemDurability: gain is added to Durability and MaxDurability, both capped at the current
             // MaxDurability (so max is unchanged); degradation is rand(kit degradation) * current max, to 2 dp.
             float maxBefore = repairable.MaxDurability;
             float newDurability = Mathf.Min(repairable.Durability + gain, maxBefore);
             Vector2 degradation = repairable.RepairKitDegradation;
-            float loss = (float)Math.Round(UnityEngine.Random.Range(degradation.x, degradation.y) * maxBefore, 2);
+            float loss = noWear ? 0f : (float)Math.Round(UnityEngine.Random.Range(degradation.x, degradation.y) * maxBefore, 2);
             float newMax = Mathf.Max(0f, maxBefore - loss);
             if (newDurability > newMax) newDurability = newMax;
 
-            bool buffed = TryRollBuff(controller, item, repairable, gain, newDurability, out float buffValue, out double buffThreshold, out EBuffRarity buffRarity, out ERepairBuffType buffType);
-            var buff = buffed ? item.GetItemComponent<BuffComponent>() : null;
-            var faceShield = item.GetItemComponent<FaceShieldComponent>();
+            var plan = new Plan { Item = item, Repairable = repairable, Gain = gain, NewDurability = newDurability, NewMax = newMax };
+            plan.Buffed = TryRollBuff(controller, item, repairable, gain, newDurability, out plan.BuffValue, out plan.BuffThreshold, out plan.BuffRarity, out plan.BuffType)
+                && item.GetItemComponent<BuffComponent>() != null;
 
-            // Everything computed; mutate.
-            foreach (var s in spend) s.Key.RepairKitComponent.Resource = s.Value;
-            repairable.MaxDurability = newMax;
-            repairable.Durability = newDurability;
-            if (faceShield != null && faceShield.Hits > 0) faceShield.Hits = 0;
-            if (buff != null)
+            foreach (var s in spend) remaining[s.Key] = s.Value;
+            return plan;
+        }
+
+        private static void Apply(List<Plan> plans, Dictionary<RepairKit, float> remaining)
+        {
+            var touched = new List<RepairKit>();
+            foreach (var pair in remaining)
             {
-                buff.Value = buffValue;
-                buff.ThresholdDurability = buffThreshold;
-                buff.Rarity = buffRarity;
-                buff.BuffType = buffType;
+                if (Mathf.Approximately(pair.Key.Resource, pair.Value)) continue;
+                pair.Key.RepairKitComponent.Resource = pair.Value;
+                touched.Add(pair.Key);
             }
-
-            foreach (var s in spend) s.Key.RaiseRefreshEvent();
-            item.UpdateAttributes();
-            item.RaiseRefreshEvent(refreshIcon: true);
-            return true;
+            foreach (Plan p in plans)
+            {
+                p.Repairable.MaxDurability = p.NewMax;
+                p.Repairable.Durability = p.NewDurability;
+                var faceShield = p.Item.GetItemComponent<FaceShieldComponent>();
+                if (faceShield != null && faceShield.Hits > 0) faceShield.Hits = 0;
+                var buff = p.Buffed ? p.Item.GetItemComponent<BuffComponent>() : null;
+                if (buff != null)
+                {
+                    buff.Value = p.BuffValue;
+                    buff.ThresholdDurability = p.BuffThreshold;
+                    buff.Rarity = p.BuffRarity;
+                    buff.BuffType = p.BuffType;
+                }
+            }
+            foreach (var k in touched) k.RaiseRefreshEvent();
+            foreach (Plan p in plans)
+            {
+                p.Item.UpdateAttributes();
+                p.Item.RaiseRefreshEvent(refreshIcon: true);
+            }
         }
 
         // RepairService.AddBuffToItem / ShouldBuffItem / AddBuff with repair.json repairKit values (plain multipliers, not percents):
