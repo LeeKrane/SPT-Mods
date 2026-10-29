@@ -1,6 +1,6 @@
 # FleaOfferGuard
 
-**Requires:** SPT 4.1.6, Fika 2.4.6 (not used, unaffected). Soft dependency on QuickSellFlea 1.4.5 (`com.lacyway.csf`): without it the plugin does nothing. Pair it with the server mod `FleaOfferGuardServer`.
+**Requires:** SPT 4.1.6, Fika 2.4.6 (not used, unaffected). Soft dependency on QuickSellFlea 1.4.5 (`com.lacyway.csf`): without it the plugin does nothing. Pair it with the server mod `FleaOfferGuard4Server`.
 
 ## What
 Stops QuickSellFlea from posting offers with an invalid price, before any item leaves the stash.

@@ -9,7 +9,7 @@ using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Helpers.Server;
 using SPTarkov.Server.Core.Models.Common;
 
-namespace AishiInsuranceDiscount;
+namespace AishiInsuranceDiscount4Server;
 
 /// <summary>Raw config; DiscountPercent is a JsonElement so a wrong type is reported instead of failing the parse.</summary>
 public sealed record DiscountConfig
@@ -34,12 +34,12 @@ public sealed class AishiInsuranceDiscountMod(ILogger<AishiInsuranceDiscountMod>
             var percent = LoadDiscountPercent();
             Multiplier = 1 - percent / 100;
             new Harmony("krane.aishiinsurancediscount").PatchAll(typeof(AishiInsuranceDiscountMod).Assembly);
-            logger.LogInformation("[AishiInsuranceDiscount] Aishi insurance {Percent}% cheaper", percent);
+            logger.LogInformation("[AishiInsuranceDiscount4Server] Aishi insurance {Percent}% cheaper", percent);
         }
         catch (Exception e)
         {
             Multiplier = 1;
-            logger.LogWarning("[AishiInsuranceDiscount] Patching failed, discount not applied: {Error}", e);
+            logger.LogWarning("[AishiInsuranceDiscount4Server] Patching failed, discount not applied: {Error}", e);
         }
         return Task.CompletedTask;
     }
@@ -53,19 +53,19 @@ public sealed class AishiInsuranceDiscountMod(ILogger<AishiInsuranceDiscountMod>
             var raw = modHelper.GetJsonDataFromFile<DiscountConfig>(folder, "config.json")?.DiscountPercent;
             if (raw is not { ValueKind: JsonValueKind.Number } el || !el.TryGetDouble(out value) || !double.IsFinite(value))
             {
-                logger.LogWarning("[AishiInsuranceDiscount] invalid DiscountPercent in config.json (must be a number), using {Default}", DefaultDiscountPercent);
+                logger.LogWarning("[AishiInsuranceDiscount4Server] invalid DiscountPercent in config.json (must be a number), using {Default}", DefaultDiscountPercent);
                 return DefaultDiscountPercent;
             }
         }
         catch (Exception e)
         {
-            logger.LogWarning("[AishiInsuranceDiscount] Could not read config.json ({Error}), using {Default}", e.Message, DefaultDiscountPercent);
+            logger.LogWarning("[AishiInsuranceDiscount4Server] Could not read config.json ({Error}), using {Default}", e.Message, DefaultDiscountPercent);
             return DefaultDiscountPercent;
         }
 
         var clamped = Math.Clamp(value, 0, MaxDiscountPercent);
         if (clamped != value)
-            logger.LogWarning("[AishiInsuranceDiscount] DiscountPercent {Value} out of range, clamped to {Clamped}", value, clamped);
+            logger.LogWarning("[AishiInsuranceDiscount4Server] DiscountPercent {Value} out of range, clamped to {Clamped}", value, clamped);
         return clamped;
     }
 }

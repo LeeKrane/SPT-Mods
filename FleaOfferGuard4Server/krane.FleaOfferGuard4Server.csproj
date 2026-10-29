@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>krane.FleaOfferGuardServer</AssemblyName>
-    <RootNamespace>FleaOfferGuardServer</RootNamespace>
+    <AssemblyName>krane.FleaOfferGuard4Server</AssemblyName>
+    <RootNamespace>FleaOfferGuard4Server</RootNamespace>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)../ServerMod.props" />

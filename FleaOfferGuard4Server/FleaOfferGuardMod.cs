@@ -14,7 +14,7 @@ using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Services.Ragfair;
 using SPTarkov.Server.Core.Utils;
 
-namespace FleaOfferGuardServer;
+namespace FleaOfferGuard4Server;
 
 /// <summary>Thrown by a derived-value check mid add-offer; the AddPlayerOffer finalizer turns it into a normal error response.</summary>
 internal sealed class FleaOfferRejectedException(string reason) : Exception(reason);

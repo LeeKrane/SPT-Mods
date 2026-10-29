@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>krane.AishiInsuranceDiscount</AssemblyName>
-    <RootNamespace>AishiInsuranceDiscount</RootNamespace>
+    <AssemblyName>krane.AishiInsuranceDiscount4Server</AssemblyName>
+    <RootNamespace>AishiInsuranceDiscount4Server</RootNamespace>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)../ServerMod.props" />
