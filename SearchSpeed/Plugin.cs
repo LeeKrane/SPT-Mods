@@ -7,9 +7,7 @@
 // Skill values are never read or written: Attention, the search buff and the elite instant search
 // (0 ms stays 0) keep working unchanged. Observed players do not run this code (Fika's
 // ObservedInventoryController creates no search operation), so only the local player is affected.
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -47,43 +45,46 @@ namespace Krane.SearchSpeed
 
             var harmony = new Harmony("krane.searchspeed");
             var transpiler = new HarmonyMethod(AccessTools.Method(typeof(Plugin), nameof(Transpiler)));
-            int patched = 0;
-            foreach (var sm in type.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)
-                         .Where(t => typeof(IAsyncStateMachine).IsAssignableFrom(t)))
+            // Only Open (initial delay) and SearchContent (per-item reveal), so any other async method
+            // added to the operation later keeps its own timing.
+            foreach (var name in StateMachines)
             {
-                var moveNext = AccessTools.Method(sm, "MoveNext");
-                if (moveNext == null) continue;
+                var sm = type.GetNestedType(name, BindingFlags.Public | BindingFlags.NonPublic);
+                var moveNext = sm != null && typeof(IAsyncStateMachine).IsAssignableFrom(sm)
+                    ? AccessTools.Method(sm, "MoveNext") : null;
+                if (moveNext == null)
+                {
+                    Log.LogWarning($"{TargetType}+{name} not found, that delay stays vanilla");
+                    continue;
+                }
                 harmony.Patch(moveNext, transpiler: transpiler);
-                patched++;
             }
 
-            // Open (initial delay) and SearchContent (per-item reveal).
-            if (patched < 2)
-                Log.LogWarning($"Patched {patched} search state machines, expected 2; some delays stay vanilla");
-            Log.LogInfo($"Loaded, x{SpeedMultiplier.Value} search speed");
+            if (_replaced < StateMachines.Length)
+                Log.LogWarning($"Scaled {_replaced} search delays, expected {StateMachines.Length}; the rest stay vanilla");
+            if (_replaced > 0)
+                Log.LogInfo($"Loaded, x{SpeedMultiplier.Value} search speed");
         }
 
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, MethodBase original)
+        private static readonly string[] StateMachines = { "CG_Open", "CG_SearchContent" };
+        private static int _replaced;
+
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            int replaced = 0;
             foreach (var ins in instructions)
             {
                 if (ins.Calls(DelayMethod))
                 {
                     ins.operand = ScaledDelayMethod;
-                    replaced++;
+                    _replaced++;
                 }
                 yield return ins;
             }
-            if (replaced == 0)
-                Log.LogWarning($"No Task.Delay(int) in {original.DeclaringType?.Name}.{original.Name}");
         }
 
-        // Read per call, so config edits apply to the next search without a restart.
-        public static Task ScaledDelay(int ms)
-        {
-            float mult = SpeedMultiplier.Value;
-            return Task.Delay(Math.Max(0, (int)(ms / (mult > 0f ? mult : 1f))));
-        }
+        // Read per call, so config edits apply to the next search without a restart. The config range
+        // keeps the multiplier positive; ms <= 0 (instant search, Timeout.Infinite) passes through.
+        public static Task ScaledDelay(int ms) =>
+            Task.Delay(ms > 0 ? (int)(ms / SpeedMultiplier.Value) : ms);
     }
 }

@@ -5,7 +5,7 @@
 ## What
 Speeds up searching containers and bodies by a configurable multiplier (default 25% faster). Both the initial "Searching" delay and each item reveal are divided by the multiplier.
 
-The multiplier applies after the game's own skill math, so Attention (loot speed, elite instant search) and the search-speed buff keep their full effect. Only the local player's searches change; other players and bots are unaffected.
+The multiplier applies after the game's own skill math, so Attention (loot speed, elite instant search) and the search-speed buff keep their full effect. Only searches run on the machine with the plugin change. Other Fika players' searches are not affected, and vanilla bots use separate search code. Install it on clients only, not on the headless client.
 
 ## Why
 SVM/Greed has no search-speed option; search timing is client-side.
