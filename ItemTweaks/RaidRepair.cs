@@ -1,36 +1,35 @@
 // Repair kits in raid. Vanilla blocks item repair in raid (ItemContextInteractionsSwitcher.IsActive(Repair) returns
-// false while InGameStatus.InRaid) and the whole repair stack is bound to the menu profile: ItemUiContext.Session is
-// null in raid, so Session?.RepairController is null, and RepairController scans the menu profile's Stash for kits.
+// false while InGameStatus.InRaid) and the whole repair stack is bound to the menu profile (trader repairers, menu Stash).
 //
-// What this does, only while the setting is on and a raid is running (everything else stays vanilla):
+// What this does, only while the setting is on and a raid is running (everything else stays vanilla). No repair window
+// ever opens in raid; repair is instant, like the stash quick repair of UIFixes:
 //  - IsActive(Repair) postfix: re-allows the button (context menu and kit drag) for items in the player's raid equipment
 //    when a suitable kit is carried in the raid equipment (any depth).
-//  - OpenRepairWindow prefix: swaps in a RepairController bound to the raid player's Profile (built without a backend
-//    session, no trader repairers).
-//  - FormRepairKitsCollection prefix: scans MainPlayer's Equipment instead of the Stash.
-//  - RepairerParametersPanel.AddRepairKit prefix: same Stash.Contains -> Equipment check.
-//  - GetBaseRepairPriceCoefficient prefix: vanilla reads the menu-only HideoutRepresentation singleton (display only).
-//  - RepairKitsCollection.RepairItems prefix: instead of RepairController.RepairItemsByRepairKit -> server "Repair"
-//    operation, applies the repair locally. The end-of-raid profile save persists Durability/MaxDurability/Resource.
+//  - SubInteractions postfix (runs last, after UIFixes): Repair is a plain action, not a trader submenu.
+//  - ItemUiContext.OpenRepairWindow prefix: the one call both the context menu and a kit drag end in. Replaced by an
+//    instant repair of the item (armor: its plates and inserts too) to the kit-repairable maximum, no confirmation.
+//    A dragged kit is spent first, then the smallest kits first.
+// Nothing patches RepairController (its static constructor throws if JIT-ed at plugin load); a controller bound to the
+// raid profile is built lazily on the first repair and only used for its pure formula methods.
 //
 // Local repair mirrors SPT 4.1.6 RepairService.RepairItemByKit / RepairHelper.UpdateItemDurability / AddBuffToItem:
 //  gain = kit points / kit divisor (client RepairController.GetRepairPrice, same formula as RepairService.GetKitDivisor);
 //  Durability = min(Durability + gain, MaxDurability); MaxDurability -= round(rand(min,max kit degradation) * MaxDurability, 2)
 //  (RepairableComponent.RepairKitDegradation = armor material or template values, as the server's repair helper uses);
 //  durability above the new max is clamped; face shield hits reset; common/rare buff roll (config values of repair.json).
+// Amount repaired = what the client repair UI would offer: MaxDurability - minimum expected kit degradation - Durability.
 // Not mirrored: skill XP gain and the elite Charisma 50% no-wear roll.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
-using System.Threading.Tasks;
 using BepInEx.Configuration;
 using Comfort.Common;
 using EFT;
+using EFT.Communications;
 using EFT.InventoryLogic;
 using EFT.Repairing;
-using EFT.Trading;
 using EFT.UI;
 using HarmonyLib;
 using UnityEngine;
@@ -44,40 +43,26 @@ namespace Krane.ItemTweaks
         private static RepairController _controller;
         private static GameWorld _controllerWorld;
 
-        // These members are not reachable by direct access against the referenced assembly (the others used below are), so reflect.
-        private static readonly FieldInfo InitialDragged = AccessTools.Field(typeof(RepairerParametersPanel), "_initialDraggedRepairKit");
-        private static readonly FieldInfo Dragged = AccessTools.Field(typeof(RepairerParametersPanel), "_draggedRepairKit");
-        private static readonly FieldInfo PanelItem = AccessTools.Field(typeof(RepairerParametersPanel), "_item");
-        private static readonly FieldInfo PanelStrategy = AccessTools.Field(typeof(RepairerParametersPanel), "_repairStrategy");
-        private static readonly FieldInfo RepairChangedEvent = AccessTools.Field(typeof(RepairController), "_onSuccessfulRepairChangedEvent");
-
-
         internal static void Init(ConfigFile config, Harmony harmony)
         {
             Enabled = config.Bind("Repair", "Allow Repair Kits In Raid", true,
-                "Armor and weapon repair kits carried in raid equipment can be used in raid: drag a kit onto an item or use the item context menu Repair. Repair is applied locally and saved at the end of the raid.");
+                "Armor and weapon repair kits carried in raid equipment can be used in raid: drag a kit onto an item or use the item context menu Repair. Repair is instant, applied locally and saved at the end of the raid.");
 
             Patch(harmony, AccessTools.Method(typeof(ItemContextInteractionsSwitcher), nameof(ItemContextInteractionsSwitcher.IsActive), new[] { typeof(EItemInfoButton) }),
                 postfix: nameof(IsActivePostfix));
             Patch(harmony, AccessTools.Method(typeof(ItemUiContext), nameof(ItemUiContext.OpenRepairWindow)), prefix: nameof(OpenRepairWindowPrefix));
-            Patch(harmony, AccessTools.Method(typeof(RepairerParametersPanel), nameof(RepairerParametersPanel.AddRepairKit)), prefix: nameof(AddRepairKitPrefix));
-            Patch(harmony, AccessTools.Method(typeof(RepairKitsCollection), nameof(RepairKitsCollection.RepairItems)), prefix: nameof(RepairItemsPrefix));
-            _harmony = harmony;
-        }
 
-        private static Harmony _harmony;
-        private static bool _controllerPatched;
-
-        // Patching a RepairController method JIT-compiles it, which runs RepairController's static constructor. At
-        // plugin load that throws (game singletons not ready) and leaves the type broken for the session, so the
-        // profile never finishes loading. Patch it on the first in-raid repair window instead, long after the
-        // session has initialized the type normally.
-        private static void EnsureControllerPatches()
-        {
-            if (_controllerPatched) return;
-            _controllerPatched = true;
-            Patch(_harmony, AccessTools.Method(typeof(RepairController), nameof(RepairController.FormRepairKitsCollection)), prefix: nameof(FormKitsPrefix));
-            Patch(_harmony, AccessTools.Method(typeof(RepairController), nameof(RepairController.GetBaseRepairPriceCoefficient)), prefix: nameof(PriceCoefficientPrefix));
+            // Run after other mods' postfixes (UIFixes turns Repair into a trader submenu in this same getter).
+            try
+            {
+                var getter = AccessTools.DeclaredProperty(typeof(BaseInventoryItemContextInteractions), nameof(BaseInventoryItemContextInteractions.SubInteractions))?.GetMethod;
+                if (getter == null) throw new MissingMethodException("BaseInventoryItemContextInteractions.SubInteractions getter");
+                harmony.Patch(getter, postfix: new HarmonyMethod(typeof(RaidRepair), nameof(SubInteractionsPostfix)) { priority = Priority.Last });
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError(e);
+            }
         }
 
         private static void Patch(Harmony harmony, MethodInfo target, string prefix = null, string postfix = null)
@@ -125,8 +110,11 @@ namespace Krane.ItemTweaks
             return item.GetItemComponentsInChildren<RepairableComponent>().Any(c => kit.CanRepair(c.Item));
         }
 
-        // A controller bound to the raid player's profile. The real constructor needs an IEftSession (for trader repairers),
-        // which does not exist in raid, so build the object without it and fill the same fields the constructor does.
+        private static bool KitUsable(RepairKit kit) => kit.Resource > 0f && kit.PinLockState != EItemPinLockState.Locked && InEquipment(kit);
+
+        // Only used for its pure formula methods (repair price/quality, skill buff chance). The real constructor needs an
+        // IEftSession (trader repairers), which does not exist in raid, so build the object without it and fill the fields
+        // those methods read.
         private static RepairController GetController()
         {
             var profile = RaidProfile;
@@ -136,13 +124,7 @@ namespace Krane.ItemTweaks
             var c = (RepairController)FormatterServices.GetUninitializedObject(typeof(RepairController));
             var skills = profile.Skills;
             c._profile = profile;
-            c._profileInventory = profile.Inventory;
             c._skillManager = skills;
-            c._preallocatedRepairKits = new List<RepairKit>();
-            var traders = typeof(RepairController).GetField("<TraderRepairers>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? typeof(RepairController).GetField("_traderRepairers", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (traders == null) throw new MissingFieldException("RepairController.TraderRepairers backing field");
-            traders.SetValue(c, new List<Trader>());
             c._lightVestRepairParameters = new RepairController.RepairParameters(skills, EBonusType.UnlockArmorRepair, EBonusType.RepairArmorBonus, ESkillId.LightVests,
                 RepairController.LightVestWearChanceReducePerLevel, RepairController.SkillsSettings.LightVests.BuffSettings, skills.LightVestDeteriorationChanceOnRepairReduce);
             c._heavyVestRepairParameters = new RepairController.RepairParameters(skills, EBonusType.UnlockArmorRepair, EBonusType.RepairArmorBonus, ESkillId.HeavyVests,
@@ -155,9 +137,6 @@ namespace Krane.ItemTweaks
             _controllerWorld = world;
             return c;
         }
-
-        private static bool IsOurs(RepairController c) => c != null && ReferenceEquals(c, _controller) && Active
-            && ReferenceEquals(_controllerWorld, Singleton<GameWorld>.Instance);
 
         // Context menu entry and kit drag target.
         private static void IsActivePostfix(ItemContextInteractionsSwitcher __instance, EItemInfoButton button, ref bool __result)
@@ -172,13 +151,13 @@ namespace Krane.ItemTweaks
                 if (__instance._itemContext is RepairItemContext ctx)
                 {
                     RepairKit kit = ctx.RepairKit;
-                    if (kit == null || kit.Resource <= 0f || !InEquipment(kit) || kit.PinLockState == EItemPinLockState.Locked) return;
+                    if (kit == null || !KitUsable(kit)) return;
                     if (!__instance._itemController.Examined(kit) || !__instance.CanRepair(ctx, item)) return;
                 }
                 else
                 {
                     var profile = RaidProfile;
-                    if (!KitsInEquipment().Any(k => k.Resource > 0f && k.PinLockState != EItemPinLockState.Locked && profile.Examined(k) && KitCanRepairTree(k, item))) return;
+                    if (!KitsInEquipment().Any(k => KitUsable(k) && profile.Examined(k) && KitCanRepairTree(k, item))) return;
                 }
                 __result = true;
             }
@@ -188,119 +167,103 @@ namespace Krane.ItemTweaks
             }
         }
 
-        private static void OpenRepairWindowPrefix(ref RepairController repairController)
+        // Repair stays a direct action in raid: drop it from the submenu list.
+        private static void SubInteractionsPostfix(ref IEnumerable<EItemInfoButton> __result)
         {
-            if (!Active) return;
-            try
-            {
-                EnsureControllerPatches();
-                repairController = GetController();
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogError(e);
-            }
+            if (__result == null || !Active) return;
+            __result = __result.Where(b => b != EItemInfoButton.Repair);
         }
 
-        private static bool FormKitsPrefix(RepairController __instance, Predicate<RepairKit> predicate, ref IEnumerable<RepairKitsCollection> __result)
-        {
-            if (!IsOurs(__instance)) return true;
-            try
-            {
-                var dict = new Dictionary<RepairKitTemplate, RepairKitsCollection>();
-                foreach (RepairKit kit in KitsInEquipment())
-                {
-                    if (kit.Resource > 0f && __instance._profile.Examined(kit) && predicate(kit) && kit.PinLockState != EItemPinLockState.Locked)
-                    {
-                        if (dict.TryGetValue(kit.RepairKitTemplate, out var existing)) existing.AddRepairKit(kit);
-                        else dict.Add(kit.RepairKitTemplate, __instance.CreateRepairKitsCollection(kit));
-                    }
-                }
-                __result = dict.Values.ToList();
-                return false;
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogError(e);
-                return true;
-            }
-        }
-
-        // Display only (price rate text); vanilla reads the menu-only hideout representation.
-        private static bool PriceCoefficientPrefix(RepairController __instance, ref double __result)
-        {
-            if (!IsOurs(__instance)) return true;
-            __result = 0.0;
-            return false;
-        }
-
-        private static bool AddRepairKitPrefix(RepairerParametersPanel __instance, RepairKit repairKit)
+        // Both the context menu Repair and dropping a kit on an item end here. Never open the window in raid.
+        private static bool OpenRepairWindowPrefix(ItemContext itemContext)
         {
             if (!Active) return true;
             try
             {
-                if (repairKit == (RepairKit)InitialDragged.GetValue(__instance)) Dragged.SetValue(__instance, repairKit);
-                var dragged = (RepairKit)Dragged.GetValue(__instance);
-                if ((InEquipment(repairKit) || repairKit == dragged) && __instance.CanRepair(repairKit, (Item)PanelItem.GetValue(__instance)))
-                    ((IRepairStrategy)PanelStrategy.GetValue(__instance)).AddRepairKitToRepairers(repairKit);
-                return false;
+                InstantRepair(itemContext);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogError(e);
-                return true;
-            }
-        }
-
-        private static bool RepairItemsPrefix(RepairKitsCollection __instance, RepairItem repairItem, RepairKit draggedRepairKit, ref Task<IResult> __result)
-        {
-            if (!IsOurs(__instance._repairController)) return true;
-            try
-            {
-                __result = Task.FromResult(ApplyLocalRepair(__instance, repairItem, draggedRepairKit));
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogError(e);
-                __result = Task.FromResult<IResult>(new FailedResult(e.Message));
+                NotificationManager.DisplayWarningNotification("Repair failed");
             }
             return false;
         }
 
-        private static IResult ApplyLocalRepair(RepairKitsCollection collection, RepairItem repairItem, RepairKit dragged)
+        private static void InstantRepair(ItemContext itemContext)
         {
-            var controller = collection._repairController;
-            Item item = Equipment?.GetAllItems().FirstOrDefault(i => i.Id == repairItem.Id);
-            RepairableComponent repairable = item?.GetItemComponent<RepairableComponent>();
-            if (repairable == null) return new FailedResult("You can't repair this kind of item");
+            Item item = itemContext?.Item;
+            if (!InEquipment(item)) { NotificationManager.DisplayWarningNotification("Item is not in your equipment"); return; }
+            RepairKit dragged = (itemContext as RepairItemContext)?.RepairKit;
+            var controller = GetController();
 
-            // Plan the kit spending first (smallest kit first, the dragged one before all, as RepairKitsCollection.RepairItems does).
-            // Kits that left the raid equipment since the window was built are skipped. Nothing is mutated until everything succeeded.
-            var kits = collection._repairKits.Where(k => InEquipment(k) && k.PinLockState != EItemPinLockState.Locked).OrderBy(k => k.Resource).ToList();
-            if (dragged != null && kits.Remove(dragged)) kits.Insert(0, dragged);
-            float need = repairItem.Count, used = 0f;
+            // Armor repairs its plates and inserts too (vanilla ArmorRepairStrategy); anything else only itself.
+            List<Item> targets = item.GetItemComponent<ArmorHolderComponent>() != null
+                ? item.GetItemComponentsInChildren<RepairableComponent>().Select(c => c.Item).Distinct().ToList()
+                : new List<Item> { item };
+
+            bool kitFound = false;
+            int repaired = 0;
+            foreach (Item target in targets)
+            {
+                RepairableComponent repairable = target.GetItemComponent<RepairableComponent>();
+                if (repairable == null) continue;
+                var kits = KitsInEquipment().Where(k => KitUsable(k) && k.CanRepair(target) && ProfileExamined(k)).OrderBy(k => k.Resource).ToList();
+                if (dragged != null && kits.Remove(dragged)) kits.Insert(0, dragged);
+                if (kits.Count == 0) continue;
+                kitFound = true;
+
+                float want = WantedGain(controller, target, repairable);
+                if (want / repairable.TemplateDurability < 0.001f) continue;
+                if (ApplyLocalRepair(controller, target, repairable, kits, want)) repaired++;
+            }
+
+            if (repaired > 0)
+            {
+                RepairableComponent root = item.GetItemComponent<RepairableComponent>();
+                string text = "Item successfully repaired to".Localized();
+                NotificationManager.DisplayMessageNotification(root != null ? $"{text} {root.Durability:F1}" : text);
+                Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.RepairComplete);
+            }
+            else
+            {
+                NotificationManager.DisplayWarningNotification(kitFound ? "Nothing to repair" : "No suitable repair kit");
+            }
+        }
+
+        private static bool ProfileExamined(RepairKit kit) => RaidProfile.Examined(kit);
+
+        // RepairKitsCollection.GetDegradationValues + ArmorRepairStrategy/DefaultRepairStrategy.HowMuchRepairScoresCanAccept.
+        private static float WantedGain(RepairController controller, Item target, RepairableComponent repairable)
+        {
+            Vector2 degradation = (target.IsArmorMod() ? 1f : (float)controller.GetBaseRepairQuality(target)) * repairable.TemplateDurability * repairable.RepairKitDegradation;
+            if (controller.HasEliteNoWearRepair(target)) degradation.x = 0f;
+            return Mathf.Max(0f, repairable.MaxDurability - degradation.x - repairable.Durability);
+        }
+
+        // Plans the kit spending first, nothing is mutated until everything succeeded.
+        private static bool ApplyLocalRepair(RepairController controller, Item item, RepairableComponent repairable, List<RepairKit> kits, float want)
+        {
+            float gain = 0f;
             var spend = new List<KeyValuePair<RepairKit, float>>();
             foreach (RepairKit kit in kits)
             {
-                if (need <= 0.0001f) break;
+                float remaining = want - gain;
+                if (remaining <= 0.0001f) break;
+                // Kit points per durability point: GetRepairPrice(kit, 1, item) is exactly RepairService.GetKitDivisor.
+                double divisor = controller.GetRepairPrice(kit.RepairKitTemplate, 1.0, item);
+                if (double.IsNaN(divisor) || double.IsInfinity(divisor) || divisor <= 0.0)
+                {
+                    Plugin.Log.LogError($"Raid repair aborted: invalid kit divisor {divisor} for {item.TemplateId}");
+                    return false;
+                }
                 float res = kit.Resource;
-                if (res <= 0f) continue;
-                float take = Mathf.Min(res, need);
-                spend.Add(new KeyValuePair<RepairKit, float>(kit, res - take));
-                used += take;
-                need -= take;
+                float take = Mathf.Min(remaining, (float)(res / divisor));
+                if (take <= 0f) continue;
+                spend.Add(new KeyValuePair<RepairKit, float>(kit, Mathf.Max(0f, res - (float)(take * divisor))));
+                gain += take;
             }
-            if (used <= 0f) return new FailedResult("Not enough repair points");
-
-            // Kit points per durability point: GetRepairPrice(kit, 1, item) is exactly RepairService.GetKitDivisor
-            // (it does not use the base price coefficient that PriceCoefficientPrefix zeroes).
-            double divisor = controller.GetRepairPrice(collection._repairKitTemplate, 1.0, item);
-            if (double.IsNaN(divisor) || double.IsInfinity(divisor) || divisor <= 0.0)
-            {
-                Plugin.Log.LogError($"Raid repair aborted: invalid kit divisor {divisor} for {item.TemplateId}");
-                return new FailedResult("Repair failed");
-            }
-            float gain = (float)(used / divisor);
+            if (gain <= 0f) return false;
 
             // RepairHelper.UpdateItemDurability: gain is added to Durability and MaxDurability, both capped at the current
             // MaxDurability (so max is unchanged); degradation is rand(kit degradation) * current max, to 2 dp.
@@ -329,9 +292,9 @@ namespace Krane.ItemTweaks
             }
 
             foreach (var s in spend) s.Key.RaiseRefreshEvent();
-            item.RaiseRefreshEvent();
-            (RepairChangedEvent?.GetValue(controller) as Action)?.Invoke();
-            return new SuccessfulResult();
+            item.UpdateAttributes();
+            item.RaiseRefreshEvent(refreshIcon: true);
+            return true;
         }
 
         // RepairService.AddBuffToItem / ShouldBuffItem / AddBuff with repair.json repairKit values (plain multipliers, not percents):
