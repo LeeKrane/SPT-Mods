@@ -107,7 +107,7 @@ namespace Krane.UseItemsAnywhereTweaks
             ShowItemsDuringUse = Config.Bind("General", "Show Items During Use", true,
                 "Keep items available in the wheel while a med/food item is being used or hands are switching. Vanilla locks the inventory meanwhile, so Use Items Anywhere marked everything UNAVAILABLE; its pending-use logic (replace/queue) then handles the selection.");
             QueueDuringUse = Config.Bind("General", "Queue Selection During Use", true,
-                "A wheel selection made while a med/food item is in use waits until that use ends (including Continuous Healing's repeats), then starts. A newer selection replaces the queued one; picking the item in use, interrupting or cancelling the use drops it. Needs Show Items During Use on and Use Items Anywhere's access delays off (with delays on, its Pending Item Use Behavior decides). Off = the selection cancels the running use (vanilla).");
+                "A wheel selection made while a med/food item is in use or hands are switching waits until that use ends (including Continuous Healing's repeats), then starts. Several selections queue up and run in pick order (up to 8); interrupting or cancelling a use drops the queue. Needs Show Items During Use on and Use Items Anywhere's access delays off (with delays on, its Pending Item Use Behavior decides). Off = the selection cancels the running use (vanilla).");
 
             DebugLogWheelKey = Config.Bind("Debug", "Log Wheel Key", false,
                 "Log Use Items Anywhere wheel key presses, controller state, Open bail conditions and gesture begin/reset. For diagnosing a wheel that will not open. Changing this needs a game restart (the debug hooks are only installed at startup when it is on).");
@@ -342,25 +342,25 @@ namespace Krane.UseItemsAnywhereTweaks
         private static bool UseSelectedPrefix(Player player, Item selectedItem, Item pendingItem)
         {
             if (pendingItem != null || player == null || selectedItem == null || !ShowItemsDuringUse.Value) return true;
+            if (player.InventoryController == null) return true;
+            if (QueueDuringUse.Value && (IsBusy(player) || (_queuedPlayer == player && _queue.Count > 0)))
+            {
+                if (!CanProceedNow(player, selectedItem)) return true;
+                // Proceeding now would replace the scheduled item or hide the MedsController and cancel the
+                // running use, so the selection waits its turn. Re-picking a queued item or the item in use
+                // does nothing.
+                if (_queuedPlayer != player) ClearQueued();
+                if (_queue.Contains(selectedItem)) return false;
+                if (player.HandsController is Player.MedsController mc && mc.Item == selectedItem && InMedUse(player)) return false;
+                if (_queue.Count >= MaxQueued) return false;
+                _queuedPlayer = player;
+                _queue.Add(selectedItem);
+                return false;
+            }
             if (player.ProcessStatus != Player.EProcessStatus.Scheduled) return true;
             // No IsChangingWeapon check: a selection made while hands are still switching is exactly what
             // the scheduled slot is for (SetItemInHands rejects it and the selection would be lost).
-            if (player.InventoryController == null) return true;
             if (!CanProceedNow(player, selectedItem)) return true;
-            if (QueueDuringUse.Value && InMedUse(player))
-            {
-                // Proceeding now would hide the MedsController and cancel the running use. Picking the
-                // item already in use means no follow-up, so it clears the queue.
-                if (player.HandsController is Player.MedsController mc && mc.Item == selectedItem)
-                    ClearQueued();
-                else
-                {
-                    _queuedPlayer = player;
-                    _queuedItem = selectedItem;
-                    _queuedDeadline = 0f;
-                }
-                return false;
-            }
             player.TryProceed(selectedItem, IgnoreHandsResult, true);
             return false;
         }
@@ -371,67 +371,98 @@ namespace Krane.UseItemsAnywhereTweaks
             return CheckActionDuringUse(item, null).Succeeded;
         }
 
-        // How long a queued selection keeps retrying after the use ended (the used-up item's removal
-        // can lock the inventory for a few frames).
+        // Hands are switching or a med/food use runs (ProcessStatus stays Scheduled for the whole use).
+        private static bool IsBusy(Player player) =>
+            player.ProcessStatus != Player.EProcessStatus.None || player.InventoryController.IsChangingWeapon || InMedUse(player);
+
+        private const int MaxQueued = 8;
+        // How long the queue head keeps retrying once it is its turn (the used-up item's removal can
+        // lock the inventory for a few frames), and how long a submitted item may take to reach the hands.
         private const float QueueRetrySeconds = 3f;
 
         private static Player _queuedPlayer;
-        private static Item _queuedItem;
-        private static float _queuedDeadline;
+        private static readonly List<Item> _queue = new List<Item>();
+        private static float _headDeadline;
+        // Hands controller at the last submit: the next item waits until the hands moved on from it, so
+        // a finished MedsController that is still hiding does not release the whole queue at once.
+        private static IHandsController _submittedFrom;
+        private static float _submittedDeadline;
 
         private static readonly AccessTools.FieldRef<Player.MedsController.MedsInHandsOperation, bool> OpFinished =
             AccessTools.FieldRefAccess<Player.MedsController.MedsInHandsOperation, bool>("_finished");
 
         // A med/food use is running until its in-hands operation finishes (Finish() sets _finished;
-        // Continuous Healing keeps the operation alive between its repeats).
+        // Continuous Healing keeps the operation alive between its repeats). A MedsController without
+        // its in-hands operation yet is still being drawn, which also counts as in use.
         private static bool InMedUse(Player player)
         {
-            var op = (player.HandsController as Player.MedsController)?.CurrentOperation;
-            return op != null && !OpFinished(op) && op.State != Player.EOperationState.Finished;
+            if (!(player.HandsController is Player.MedsController mc)) return false;
+            var op = mc.CurrentOperation;
+            return op == null || (!OpFinished(op) && op.State != Player.EOperationState.Finished);
         }
 
-        // Submits the queued selection once the med use ends, retrying for QueueRetrySeconds while the
-        // item cannot be taken yet. It goes through the scheduled TryProceed, so it replaces the
-        // automatic switch back to the previous item.
+        // The next queued item may start: the current med/food use has finished (the scheduled
+        // TryProceed then replaces the automatic switch back to the previous item), or hands are idle.
+        private static bool ReadyForNext(Player player)
+        {
+            if (_submittedFrom != null)
+            {
+                if (ReferenceEquals(player.HandsController, _submittedFrom) && Time.time < _submittedDeadline) return false;
+                _submittedFrom = null;
+            }
+            if (player.HandsController is Player.MedsController) return !InMedUse(player);
+            return player.ProcessStatus == Player.EProcessStatus.None && !player.InventoryController.IsChangingWeapon;
+        }
+
+        // Submits queued selections one at a time, in pick order, each once the previous use ended.
         private void Update()
         {
             var player = _queuedPlayer;
             if (player == null) return;
-            if (!QueueDuringUse.Value || !player || !player.HealthController.IsAlive || player.InventoryController == null)
+            if (!QueueDuringUse.Value || !player || !player.HealthController.IsAlive || player.InventoryController == null || _queue.Count == 0)
             {
                 ClearQueued();
                 return;
             }
-            if (InMedUse(player)) return;
-            if (_queuedDeadline == 0f) _queuedDeadline = Time.time + QueueRetrySeconds;
-            var item = _queuedItem;
+            if (!ReadyForNext(player)) return;
+            var item = _queue[0];
             if (!CanProceedNow(player, item))
             {
-                if (Time.time > _queuedDeadline)
+                if (_headDeadline == 0f) _headDeadline = Time.time + QueueRetrySeconds;
+                else if (Time.time > _headDeadline)
                 {
-                    Log.LogDebug("Queued wheel selection " + item.LocalizedShortName() + " dropped: still not usable after the med use ended.");
-                    ClearQueued();
+                    Log.LogDebug("Queued wheel selection " + item.LocalizedShortName() + " dropped: still not usable on its turn.");
+                    DequeueHead();
                 }
                 return;
             }
-            ClearQueued();
+            DequeueHead();
             if (player.HealthController.IsItemForHealing(item) && !player.HealthController.CanApplyItem(item, EBodyPart.Common))
             {
                 Log.LogDebug("Queued wheel selection " + item.LocalizedShortName() + " dropped: nothing to treat.");
                 return;
             }
+            _submittedFrom = player.HandsController;
+            _submittedDeadline = Time.time + QueueRetrySeconds;
             player.TryProceed(item, IgnoreHandsResult, true);
+        }
+
+        private static void DequeueHead()
+        {
+            _queue.RemoveAt(0);
+            _headDeadline = 0f;
         }
 
         private static void ClearQueued()
         {
             _queuedPlayer = null;
-            _queuedItem = null;
-            _queuedDeadline = 0f;
+            _queue.Clear();
+            _headDeadline = 0f;
+            _submittedFrom = null;
         }
 
         // The use is interrupted (hidden before it finished, e.g. a weapon key) or cancelled (fire key):
-        // the player chose something else, so the queued selection is dropped.
+        // the player chose something else, so the whole queue is dropped.
         private static void PatchQueueCancel(Harmony harmony)
         {
             var hide = AccessTools.Method(typeof(Player.MedsController.MedsInHandsOperation), "HideWeapon");
