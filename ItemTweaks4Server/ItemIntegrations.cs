@@ -50,6 +50,7 @@ public sealed class ItemIntegrations(
                 if (def.ReplicateFilters) Guard($"{def.Name} slot filters", () => AddToFilters(def));
             }
             if (def.AddToSpecialSlots) Guard($"{def.Name} special slots", () => AddToSpecialSlots(def));
+            if (def.AddToSecureContainers) Guard($"{def.Name} secure containers", () => AddToSecureContainers(def));
             foreach (var offer in def.Offers)
                 Guard($"{def.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
         }
@@ -93,21 +94,37 @@ public sealed class ItemIntegrations(
         logger.LogInformation("[ItemTweaks4Server] Added {Name} to {Filters} special slot filter(s) of {Items} item(s)", def.Name, filters, items);
     }
 
+    /// <summary>Secured containers list their allowed items per grid filter; the ones that take the key tool (the key containers) also get the new case.</summary>
+    private void AddToSecureContainers(CloneDef def)
+    {
+        var keyTool = new MongoId(Ids.KeyTool);
+        var secured = new MongoId(Ids.SecuredContainerParent);
+        var (filters, items) = AddToSets(def,
+            props => (props.Grids ?? []).SelectMany(g => g.Properties?.Filters ?? []).Select(f => f.Filter).OfType<HashSet<MongoId>>(),
+            set => set.Contains(keyTool),
+            item => item.Parent == secured);
+        if (filters == 0)
+            logger.LogWarning("[ItemTweaks4Server] {Name} was not added to any secure container grid filter listing the key tool", def.Name);
+        else
+            logger.LogInformation("[ItemTweaks4Server] Added {Name} to {Filters} grid filter(s) of {Items} secure container(s)", def.Name, filters, items);
+    }
+
     private static IEnumerable<Slot> AllSlots(TemplateItemProperties props) =>
         (props.Slots ?? []).Concat(props.Chambers ?? []).Concat(props.Cartridges ?? []);
 
     private static IEnumerable<HashSet<MongoId>> SlotFilterSets(IEnumerable<Slot> slots) =>
         slots.SelectMany(s => s.Properties?.Filters ?? []).Select(f => f.Filter).OfType<HashSet<MongoId>>();
 
-    /// <summary>Shared walk over every template: adds the clone to each set picked by <paramref name="pick"/> that passes <paramref name="match"/>.</summary>
-    private (int Filters, int Items) AddToSets(CloneDef def, Func<TemplateItemProperties, IEnumerable<HashSet<MongoId>>> pick, Func<HashSet<MongoId>, bool> match)
+    /// <summary>Shared walk over every template: adds the clone to each set picked by <paramref name="pick"/> that passes <paramref name="match"/>, limited to templates passing <paramref name="template"/> when given.</summary>
+    private (int Filters, int Items) AddToSets(CloneDef def, Func<TemplateItemProperties, IEnumerable<HashSet<MongoId>>> pick, Func<HashSet<MongoId>, bool> match,
+        Func<TemplateItem, bool>? template = null)
     {
         var clone = new MongoId(def.CloneTpl);
         var filters = 0;
         var items = 0;
         foreach (var item in templateTable.Items.Values)
         {
-            if (item.Properties == null) continue;
+            if (item.Properties == null || template?.Invoke(item) == false) continue;
             var before = filters;
             foreach (var set in pick(item.Properties))
             {

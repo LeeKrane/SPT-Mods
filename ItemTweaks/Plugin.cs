@@ -1,13 +1,15 @@
-// Client side of the ItemTweaks4Server "light case" (template f39e1020a6eb538f07653b87, a clone of the Dogtag case).
+// Client side of the two ItemTweaks4Server cases: the Spec-ops kit case (template f39e1020a6eb538f07653b87, a clone of the
+// Dogtag case) and the Spec-ops key case (template c40d4da0b8d5434d00fffb4c, a clone of the Gingy keychain).
 //
 // Weight: all weight in the game funnels through ContainerExtensions.TotalWeight(IContainer) (sum of the
 // children's TotalWeight), called by ContainerCollection.TotalWeight, which Inventory.TotalWeight/equipment
 // weight/tooltips all recurse through. Nothing caches it per item; Inventory.TotalWeight is a Deferred that is
 // marked dirty on every add/remove/refresh event under the equipment, so a postfix scaling the result for
-// containers whose parent is the case stays correct on every move. The case's own weight is untouched.
+// containers whose parent is one of the cases stays correct on every move (each case has its own multiplier). The cases' own weight is untouched.
 //
-// Look: the model is the Dogtag case's, from the same bundle and pool, so it is tinted per renderer with a
-// MaterialPropertyBlock (no shared material is modified) right after ObjectsFactory.CreateItemAsync builds it.
+// Look: the models are the Dogtag case's and the Gingy keychain's, from their own bundles and pools, so they are tinted per
+// renderer with a MaterialPropertyBlock (no shared material is modified) right after ObjectsFactory.CreateItemAsync builds
+// them. Spec-ops case: optional flat albedo replacement (light gray). Key case: multiply tint only (a darker keychain).
 // Icons are rendered from that same model (ItemIconCreator.RenderModel -> CreateCleanLootPrefabAsync ->
 // CreateItemAsync) and cached by template id, so they come out tinted too. Pooled models are cleaned again
 // when they are reused for another template.
@@ -32,32 +34,64 @@ namespace Krane.ItemTweaks
     public class Plugin : BaseUnityPlugin
     {
         internal const string CaseId = "f39e1020a6eb538f07653b87";
+        internal const string KeyCaseId = "c40d4da0b8d5434d00fffb4c";
 
         internal static ManualLogSource Log;
         private static readonly MongoID CaseMongoId = CaseId;
+        private static readonly MongoID KeyCaseMongoId = KeyCaseId;
+
+        // Per-case behavior: weight multiplier and look. Color/Flat are read live from the config. Multiply: multiply the material's own
+        // color by the tint instead of replacing it.
+        private sealed class CaseSpec
+        {
+            internal float WeightMultiplier = 0.1f;
+            internal Func<Color> Color;
+            internal Func<bool> Flat;
+            internal bool Multiply;
+        }
+
+        private static readonly CaseSpec KitCase = new CaseSpec { Color = () => TintColor.Value, Flat = () => FlatTint.Value };
+        private static readonly CaseSpec KeyCase = new CaseSpec { Color = () => KeyTintColor.Value, Flat = () => false, Multiply = true };
+        private static readonly Dictionary<MongoID, CaseSpec> Cases = new Dictionary<MongoID, CaseSpec>
+        {
+            { CaseMongoId, KitCase },
+            { KeyCaseMongoId, KeyCase },
+        };
 
         internal static ConfigEntry<int> WeightReduction;
-        private static float _weightMultiplier = 0.1f;
         internal static ConfigEntry<Color> TintColor;
         internal static ConfigEntry<bool> FlatTint;
+        internal static ConfigEntry<int> KeyWeightReduction;
+        internal static ConfigEntry<Color> KeyTintColor;
 
         private void Awake()
         {
             Log = Logger;
             _mainThread = Thread.CurrentThread.ManagedThreadId;
             WeightReduction = Config.Bind("Weight", "Content Weight Reduction", 90,
-                new ConfigDescription("Percent by which items stored in the light case are lighter than normal (90 = they weigh 10%). The case itself is unchanged.",
+                new ConfigDescription("Spec-ops kit case: percent by which items stored in it are lighter than normal (90 = they weigh 10%). The case itself is unchanged.",
                     new AcceptableValueRange<int>(0, 95)));
-            _weightMultiplier = 1f - WeightReduction.Value / 100f;
+            KitCase.WeightMultiplier = 1f - WeightReduction.Value / 100f;
             WeightReduction.SettingChanged += (_, __) =>
             {
-                _weightMultiplier = 1f - WeightReduction.Value / 100f;
+                KitCase.WeightMultiplier = 1f - WeightReduction.Value / 100f;
+                MarkWeightDirty();
+            };
+            KeyWeightReduction = Config.Bind("Weight", "Key Case Content Weight Reduction", 90,
+                new ConfigDescription("Spec-ops key case: percent by which items stored in it are lighter than normal (90 = they weigh 10%). The case itself is unchanged.",
+                    new AcceptableValueRange<int>(0, 95)));
+            KeyCase.WeightMultiplier = 1f - KeyWeightReduction.Value / 100f;
+            KeyWeightReduction.SettingChanged += (_, __) =>
+            {
+                KeyCase.WeightMultiplier = 1f - KeyWeightReduction.Value / 100f;
                 MarkWeightDirty();
             };
             TintColor = Config.Bind("Look", "Case Color", new Color(0.93f, 0.93f, 0.93f, 1f),
-                "Color of the light case model and icon.");
+                "Spec-ops kit case: color of the model and icon.");
             FlatTint = Config.Bind("Look", "Flat Color", true,
-                "Replace the case albedo texture with a flat color so it comes out light gray. Off: only multiply the existing texture by the color (stays dark). Changes apply to icons generated after a game restart.");
+                "Spec-ops kit case: replace the albedo texture with a flat color so it comes out light gray. Off: only multiply the existing texture by the color (stays dark). Changes apply to icons generated after a game restart.");
+            KeyTintColor = Config.Bind("Look", "Key Case Color", new Color(0.75f, 0.75f, 0.75f, 1f),
+                "Spec-ops key case: color the Gingy keychain model and icon are multiplied by (darkens it). Changes apply to icons generated after a game restart.");
 
             var h = new Harmony("krane.itemtweaks");
             SafePatch(h, typeof(Plugin), AccessTools.Method(typeof(ContainerExtensions), nameof(ContainerExtensions.TotalWeight), new[] { typeof(IContainer) }),
@@ -92,8 +126,9 @@ namespace Krane.ItemTweaks
         private static void WeightPostfix(IContainer container, ref float __result)
         {
             Item parent = container?.ParentItem;
-            if (parent != null && parent.TemplateId == CaseMongoId)
-                __result *= _weightMultiplier;
+            if (parent == null) return;
+            if (Cases.TryGetValue(parent.TemplateId, out var spec))
+                __result *= spec.WeightMultiplier;
         }
 
         // Inventory.TotalWeight is a cached Deferred that is only dirtied by item events; invalidate it so a changed setting shows at once.
@@ -149,11 +184,11 @@ namespace Krane.ItemTweaks
         private static void CreateItemPostfix(Item item, ref Task<GameObject> __result)
         {
             if (item == null || __result == null) return;
-            bool ours = item.TemplateId == CaseId;
-            __result = Wrap(__result, ours);
+            Cases.TryGetValue(item.TemplateId, out var spec);
+            __result = Wrap(__result, spec);
         }
 
-        private static async Task<GameObject> Wrap(Task<GameObject> task, bool ours)
+        private static async Task<GameObject> Wrap(Task<GameObject> task, CaseSpec spec)
         {
             GameObject go = await task;
             if (go == null) return go;
@@ -161,8 +196,9 @@ namespace Krane.ItemTweaks
             {
                 await RunOnMainThread(() =>
                 {
-                    if (ours) Tint(go);
-                    else Untint(go);
+                    // Always start from the untinted state: a pooled model may carry the other case's tint.
+                    Untint(go);
+                    if (spec != null) Tint(go, spec.Color(), spec.Flat(), spec.Multiply);
                 });
             }
             catch (Exception e)
@@ -184,7 +220,7 @@ namespace Krane.ItemTweaks
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
 
-        private static void Tint(GameObject go)
+        private static void Tint(GameObject go, Color c, bool flat, bool multiply)
         {
             if (_white == null)
             {
@@ -193,9 +229,7 @@ namespace Krane.ItemTweaks
                 _white.Apply();
                 _white.hideFlags = HideFlags.HideAndDontSave;
             }
-            var marker = go.GetComponent<TintMarker>();
-            bool fresh = marker == null;
-            if (fresh) marker = go.AddComponent<TintMarker>();
+            var marker = go.AddComponent<TintMarker>();
             var renderers = go.GetComponentsInChildren<Renderer>(true);
             foreach (var r in renderers)
             {
@@ -207,20 +241,16 @@ namespace Krane.ItemTweaks
                     if (m == null) continue;
                     var mpb = new MaterialPropertyBlock();
                     if (r.HasPropertyBlock()) r.GetPropertyBlock(mpb, i);
-                    if (fresh)
+                    MaterialPropertyBlock original = null;
+                    if (!mpb.isEmpty)
                     {
-                        MaterialPropertyBlock original = null;
-                        if (!mpb.isEmpty)
-                        {
-                            original = new MaterialPropertyBlock();
-                            r.GetPropertyBlock(original, i);
-                        }
-                        marker.Saved.Add((r, i, original));
+                        original = new MaterialPropertyBlock();
+                        r.GetPropertyBlock(original, i);
                     }
-                    var c = TintColor.Value;
-                    if (m.HasProperty(ColorId)) mpb.SetColor(ColorId, c);
-                    if (m.HasProperty(BaseColorId)) mpb.SetColor(BaseColorId, c);
-                    if (FlatTint.Value)
+                    marker.Saved.Add((r, i, original));
+                    if (m.HasProperty(ColorId)) mpb.SetColor(ColorId, multiply ? m.GetColor(ColorId) * c : c);
+                    if (m.HasProperty(BaseColorId)) mpb.SetColor(BaseColorId, multiply ? m.GetColor(BaseColorId) * c : c);
+                    if (flat)
                     {
                         if (m.HasProperty(MainTexId)) mpb.SetTexture(MainTexId, _white);
                         if (m.HasProperty(BaseMapId)) mpb.SetTexture(BaseMapId, _white);
@@ -230,8 +260,8 @@ namespace Krane.ItemTweaks
             }
         }
 
-        // The model comes from a pool shared with the original Dogtag case: undo our tint when a pooled, tinted
-        // instance is handed to another template.
+        // The models come from pools shared with the original items (and between our two cases): undo our tint when a
+        // pooled, tinted instance is handed to another template.
         private static void Untint(GameObject go)
         {
             var marker = go.GetComponent<TintMarker>();

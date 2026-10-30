@@ -34,6 +34,7 @@ internal sealed record OfferDef(
 /// <param name="IsVariant">A stronger variant of the source: joins its quests, bot pools and filters (when ReplicateFilters). False for an unrelated new item
 /// that merely reuses the source's model.</param>
 /// <param name="AddToSpecialSlots">Add the clone to the filter of every slot named SpecialSlot*.</param>
+/// <param name="AddToSecureContainers">Add the clone to the grid filter of every secured container whose filter lists the key tool.</param>
 internal sealed record CloneDef(
     string Name,
     string SourceName,
@@ -46,7 +47,8 @@ internal sealed record CloneDef(
     bool ReplicateFilters,
     OfferDef[] Offers,
     bool IsVariant = true,
-    bool AddToSpecialSlots = false);
+    bool AddToSpecialSlots = false,
+    bool AddToSecureContainers = false);
 
 /// <summary>Fixed ids and the clone list. Item and preset ids must match the JSON under db/.</summary>
 internal static class Ids
@@ -85,6 +87,11 @@ internal static class Ids
 
     public const string DogtagCase = "5c093e3486f77430cb02e593";
     public const string SpecOpsCase = "f39e1020a6eb538f07653b87";
+
+    public const string GingyKeychain = "62a09d3bcf4a99369e262447";
+    public const string KeyCase = "c40d4da0b8d5434d00fffb4c";
+    public const string KeyTool = "59fafd4b86f7745ca07e1232";
+    public const string SecuredContainerParent = "5448bf274bdc2dfc2f8b456a";
 }
 
 internal static class Clones
@@ -160,5 +167,10 @@ internal static class Clones
         [
             new(Ids.NatoQuartermaster, 1, ["2ca535e7b954eb436c4d78a6"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
         ], IsVariant: false, AddToSpecialSlots: true),
+        // New item reusing the Gingy keychain model. Placed in special slots and in every secure container that takes the key tool.
+        new("Spec-ops key case", "Gingy keychain", Ids.GingyKeychain, Ids.KeyCase, "db/KeyCase", null, null, ShareMastery: false, ReplicateFilters: false,
+        [
+            new(Ids.NatoQuartermaster, 1, ["1dc853e420eb2b1fbe1d0e5d"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
+        ], IsVariant: false, AddToSpecialSlots: true, AddToSecureContainers: true),
     ];
 }

@@ -1,22 +1,23 @@
 # ItemTweaks
 
-**Requires:** SPT 4.1.6, Fika 2.4.6. Soft dependency on the server mod ItemTweaks4Server (adds the light case item); without it only the repair-in-raid feature does anything. Install on every client and on the headless client.
+**Requires:** SPT 4.1.6, Fika 2.4.6. Soft dependency on the server mod ItemTweaks4Server (adds the case items); without it only the repair-in-raid feature does anything. Install on every client and on the headless client.
 
 ## What
-Client side of the light case (template `f39e1020a6eb538f07653b87`, a Dogtag case clone, 1x1, one 3x6 grid):
-- Everything stored in the case is lighter (90% by default, see settings) in all weight calculations (player weight, overweight, stamina, tooltips). The case's own weight is unchanged.
-- The case model and its inventory icon are light gray. The original Dogtag case is unaffected.
+Client side of the two server-mod cases:
+- Spec-ops kit case (template `f39e1020a6eb538f07653b87`, a Dogtag case clone, 1x1, one 3x6 grid): model and inventory icon are light gray; the original Dogtag case is unaffected.
+- Spec-ops key case (template `c40d4da0b8d5434d00fffb4c`, a Gingy keychain clone, 1x1, one 4x4 grid that takes keys, keycards and a few related items; its contraband key `67449b6c89d5e1ddc603f504` is item_barter_other_contraband_key, a barter item outside the Key category that the key tool accepts): model and icon are the keychain darkened a little; the original keychain is unaffected.
+- Everything stored in either case is lighter (90% by default, own setting per case) in all weight calculations (player weight, overweight, stamina, tooltips). The cases' own weight is unchanged.
 
 Independent of the case (works without ItemTweaks4Server):
 - Armor and weapon repair kits carried in raid equipment (rig, backpack, pockets, containers, any depth) can be used in raid: drag a kit onto an item, or use the item context menu Repair (shown only when a suitable kit is carried). Repair is instant, no window and no trader entries: the item (armor: plates and inserts too) is repaired as far as the kits allow, a dragged kit is spent first, then the smallest kits.
 
 ## Why
-The case is a lightweight carry container. Weight and look are client-side, so the server mod only adds the item.
+The cases are lightweight carry containers. Weight and look are client-side, so the server mod only adds the item.
 Vanilla disables repair in raid. Kits are consumable and the Spec-ops kit case makes carrying them practical.
 
 ## How
-Weight: postfix on `ContainerExtensions.TotalWeight(IContainer)`, the one place container contents are summed; scaled when the container belongs to the case. Fika needs no changes, weight is local.
-Look: the model comes from the Dogtag case bundle, so after `ObjectsFactory.CreateItemAsync` it is tinted per renderer with a property block (shared materials untouched, pooled models reset when reused). Icons are rendered from that model.
+Weight: postfix on `ContainerExtensions.TotalWeight(IContainer)`, the one place container contents are summed; scaled by the case's multiplier when the container belongs to one of the cases. Fika needs no changes, weight is local.
+Look: the models come from the Dogtag case and Gingy keychain bundles, so after `ObjectsFactory.CreateItemAsync` it is tinted per renderer with a property block (shared materials untouched, pooled models reset when reused). The spec-ops case can replace the albedo with a flat color; the key case only multiplies the keychain texture by its color. Icons are rendered from that model.
 
 Repair in raid: vanilla hides Repair in raid (`ItemContextInteractionsSwitcher.IsActive`) and its repair stack is bound to the menu profile. Patches (all inactive outside a raid or with the setting off) re-allow Repair, keep it a plain action instead of a trader submenu (UIFixes adds one; `SubInteractions` postfix runs last), and replace `ItemUiContext.OpenRepairWindow` (the context menu and a kit drag both end there) with an instant local repair, so the repair window never opens in raid. A `RepairController` bound to the raid profile is built lazily, only for its formulas; `RepairController` itself is never patched. The amount repaired is what the repair window would offer (max durability minus the minimum kit wear, minus current durability). Formula follows SPT 4.1.6 `RepairService.RepairItemByKit` / `RepairHelper.UpdateItemDurability` / `AddBuffToItem`: kit points divided by the client repair cost formula (skills, armor material, class) give the durability gain, max durability then drops by a random material/weapon kit degradation scaled by In-Raid Wear Percent (default 10%: a 3.5 loss becomes 0.35), buffs roll as in `repair.json`. A repair whose gain would not exceed the average scaled wear loss is skipped ("Nothing to repair"), so tiny repairs never cost more max durability than they restore. The amount repaired uses the same scaled minimum wear, computed on the current max durability and rounded to 2 dp exactly like the applied loss, so kit points are not spent on durability the wear takes back. Weapon wear base: the client only knows the template's trader repair degradation (the server's kit values are usually 0.005 lower, e.g. 0.04 vs 0.035); accepted, negligible at the scaled wear. Elite Charisma (level 51) gives each repaired item a 50% chance of no max durability loss, as the server does (`ShouldRepairKitApplyDurabilityLoss`); the amount is computed after that roll, so no kit points are wasted. Not done: skill XP. Armor targets are the armor and the items in its slots (plates, inserts), as vanilla; items stored in its grids (armored rig pockets) are never repaired and do not enable Repair. All targets are planned before anything is changed. Kits with under 0.01 points left count as used up. A fully used kit stays in the inventory with 0 points. Durability, max durability and kit points are saved with the profile at the end of the raid.
 Fika: no network changes; repair is local. Known limitation: other players (and the host) keep the old durability and kit points until the next raid, so a kit you spent or dropped still looks full to them, and a kit dropped after use can be picked up with its old points (duplication). Not fixable without network sync.
@@ -24,8 +25,10 @@ Fika: no network changes; repair is local. Known limitation: other players (and 
 ## Settings
 | Key | Default | Effect |
 |---|---|---|
-| Weight / Content Weight Reduction | `90` | Percent of weight removed from items inside the case (0 to 95). Applies live. |
-| Look / Case Color | very light gray (0.93) | Color of the case model and icon. |
-| Look / Flat Color | `true` | Replace the albedo texture with a flat color. Off: multiply the texture by the color only (stays dark). Icons already cached keep the old look. |
+| Weight / Content Weight Reduction | `90` | Spec-ops kit case: percent of weight removed from items inside it (0 to 95). Applies live. |
+| Weight / Key Case Content Weight Reduction | `90` | Spec-ops key case: same, 0 to 95. Applies live. |
+| Look / Case Color | very light gray (0.93) | Spec-ops kit case: color of the model and icon. |
+| Look / Flat Color | `true` | Spec-ops kit case: replace the albedo texture with a flat color. Off: multiply the texture by the color only (stays dark). Icons already cached keep the old look. |
+| Look / Key Case Color | gray (0.75) | Spec-ops key case: the keychain model and icon are multiplied by this color (darkens). Icons already cached keep the old look. |
 | Repair / Allow Repair Kits In Raid | `true` | Allow using armor/weapon repair kits in raid (drag onto item or context menu Repair, instant). Off: vanilla, no repair in raid. |
 | Repair / In-Raid Wear Percent | `10` | Max durability lost by an in-raid kit repair, in percent of the normal kit repair loss (0 to 100; 100 = as a stash kit repair, 0 = none). Weapons, armor and plates. |
