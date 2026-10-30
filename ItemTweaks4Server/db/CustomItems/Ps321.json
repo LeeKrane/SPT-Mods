@@ -1,0 +1,28 @@
+{
+  "41a2f314a21e64a4862d6bd1": {
+    "itemTplToClone": "5c0517910db83400232ffee5",
+    "parentId": "55818add4bdc2d5b648b456f",
+    "handbookParentId": "5b5f740a86f77447ec5d7706",
+    "overrideProperties": {
+      "Ergonomics": -2,
+      "Zooms": [[5, 1]],
+      "AimSensitivity": [[0.091, 0.455]]
+    },
+    "locales": {
+      "en": {
+        "name": "Valday PS-321 1/5x scope",
+        "shortName": "PS-321",
+        "description": "PS-321 1x/5x is a prototype scope designed by Valday."
+      }
+    },
+    "fleaPriceRoubles": 85484,
+    "handbookPriceRoubles": 76240,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

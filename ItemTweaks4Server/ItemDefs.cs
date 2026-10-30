@@ -6,6 +6,7 @@ namespace ItemTweaks4Server;
 /// <param name="FixedPrice">Price as is, in Currency. Otherwise 2x the price of the source item at OwnPriceTrader.</param>
 /// <param name="FallbackPriceTrader">Used when OwnPriceTrader has no source offer: 2x that trader's source price times FallbackFactor.</param>
 /// <param name="Optional">The trader is a soft dependency: skipped with a log line when absent.</param>
+/// <param name="Barter">Paid with Count items of Tpl instead of money; no price is resolved.</param>
 internal sealed record OfferDef(
     string TraderId,
     int LoyaltyLevel,
@@ -16,7 +17,8 @@ internal sealed record OfferDef(
     string? FallbackPriceTrader = null,
     double FallbackFactor = 1,
     bool Optional = false,
-    string? Currency = null)
+    string? Currency = null,
+    (string Tpl, int Count)? Barter = null)
 {
     /// <summary>Payment currency tpl, roubles when null. Only FixedPrice supports another currency.</summary>
     public string CurrencyTpl => Currency ?? Ids.Roubles;
@@ -69,6 +71,7 @@ internal static class Ids
     public static readonly IReadOnlyDictionary<string, string> TraderNames = new Dictionary<string, string>
     {
         [Peacekeeper] = "Peacekeeper",
+        [Prapor] = "Prapor",
         [Jaeger] = "Jaeger",
         [Mechanic] = "Mechanic",
         [NatoQuartermaster] = "NATO Quartermaster",
@@ -92,6 +95,11 @@ internal static class Ids
     public const string KeyCase = "c40d4da0b8d5434d00fffb4c";
     public const string KeyTool = "59fafd4b86f7745ca07e1232";
     public const string SecuredContainerParent = "5448bf274bdc2dfc2f8b456a";
+
+    public const string Prapor = "54cb50c76803fa8b248b4571";
+    public const string Ps320 = "5c0517910db83400232ffee5";
+    public const string Ps321 = "41a2f314a21e64a4862d6bd1";
+    public const string TarkovskayaVodka = "5d40407c86f774318526545a";
 }
 
 internal static class Clones
@@ -161,6 +169,12 @@ internal static class Clones
             new(Ids.Mechanic, 4, ["6a759e292d6cc46c49c03b36"], 6, OwnPriceTrader: Ids.Mechanic),
             new(Ids.NatoQuartermaster, 1, ["6a5f7d23e728fd472d2171be"], 6, OwnPriceTrader: Ids.NatoQuartermaster,
                 FallbackPriceTrader: Ids.Mechanic, FallbackFactor: 1.25, Optional: true),
+        ]),
+        new("PS-321", "PS-320", Ids.Ps320, Ids.Ps321, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            // Prapor LL4: the PS-320 barter (2 vodka) doubled. NATO: 2x the source flea price (42742).
+            new(Ids.Prapor, 4, ["1c46de07e12aa6b66b127889"], 1, Barter: (Ids.TarkovskayaVodka, 4)),
+            new(Ids.NatoQuartermaster, 1, ["a37b5e4f4daa2c1460d6361e"], 3, FixedPrice: 85484, Optional: true),
         ]),
         // New item reusing the dogtag case model: no quests, bots, filters or mastery of the source. Placed in special slots.
         new("Spec-ops kit case", "Dogtag case", Ids.DogtagCase, Ids.SpecOpsCase, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: false,

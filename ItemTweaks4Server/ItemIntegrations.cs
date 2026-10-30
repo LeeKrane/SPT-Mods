@@ -403,10 +403,25 @@ public sealed class ItemIntegrations(
             });
         }
 
-        var price = ResolvePrice(def, offer);
+        // Payment: a barter item, else money (resolved price).
+        double count;
+        MongoId paymentTpl;
+        string paymentName;
+        if (offer.Barter is { } barter)
+        {
+            count = barter.Count;
+            paymentTpl = new MongoId(barter.Tpl);
+            paymentName = templateTable.Items.TryGetValue(paymentTpl, out var paymentItem) && paymentItem.Name != null ? paymentItem.Name : barter.Tpl;
+        }
+        else
+        {
+            count = ResolvePrice(def, offer);
+            paymentTpl = new MongoId(offer.CurrencyTpl);
+            paymentName = offer.CurrencyName;
+        }
         trader.Assort.Items.AddRange(items);
-        trader.Assort.BarterScheme[rootId] = [[new BarterScheme { Count = price, Template = offer.CurrencyTpl }]];
+        trader.Assort.BarterScheme[rootId] = [[new BarterScheme { Count = count, Template = paymentTpl }]];
         trader.Assort.LoyalLevelItems[rootId] = offer.LoyaltyLevel;
-        logger.LogInformation("[ItemTweaks4Server] {Trader}: {Name} at LL{Level} for {Price} {Currency}, {Limit} per restock", offer.TraderName, def.Name, offer.LoyaltyLevel, price, offer.CurrencyName, offer.Limit);
+        logger.LogInformation("[ItemTweaks4Server] {Trader}: {Name} at LL{Level} for {Count} {Payment}, {Limit} per restock", offer.TraderName, def.Name, offer.LoyaltyLevel, count, paymentName, offer.Limit);
     }
 }

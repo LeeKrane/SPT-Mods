@@ -100,6 +100,8 @@ namespace Krane.ItemTweaks
                 postfix: nameof(CreateItemPostfix));
             try { RaidRepair.Init(Config, h); }
             catch (Exception e) { Log.LogError(e); }
+            try { Ps321Scope.Init(h); }
+            catch (Exception e) { Log.LogError(e); }
             Log.LogInfo("ItemTweaks loaded");
         }
 
