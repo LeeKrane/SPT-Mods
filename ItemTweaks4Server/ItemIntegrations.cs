@@ -54,6 +54,16 @@ public sealed class ItemIntegrations(
             foreach (var offer in def.Offers)
                 Guard($"{def.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
         }
+        foreach (var def in Resales.All)
+        {
+            if (!templateTable.Items.ContainsKey(new MongoId(def.Tpl)))
+            {
+                logger.LogInformation("[ItemTweaks4Server] {Mod} item {Name} ({Tpl}) not found, its offers skipped", def.SourceMod, def.Name, def.Tpl);
+                continue;
+            }
+            foreach (var offer in def.Offers)
+                Guard($"{def.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
+        }
         return Task.CompletedTask;
     }
 
@@ -294,7 +304,7 @@ public sealed class ItemIntegrations(
     // ---- Traders ---------------------------------------------------------------------------------
 
     /// <summary>Price in roubles: fixed, else 2x the source's offer at the offer's price trader, else the fallback (see <see cref="OfferDef"/>).</summary>
-    private double ResolvePrice(CloneDef def, OfferDef offer)
+    private double ResolvePrice(IOffered def, OfferDef offer)
     {
         if (offer.FixedPrice is { } fixedPrice) return fixedPrice;
         if (offer.CurrencyTpl != Ids.Roubles) throw new InvalidOperationException($"{def.Name}: a non-rouble offer needs a FixedPrice");
@@ -323,7 +333,7 @@ public sealed class ItemIntegrations(
     }
 
     /// <summary>Price of the trader's source root offer in roubles, or null when absent or not paid in money.</summary>
-    private double? TryReadOfferRoubles(CloneDef def, string traderId)
+    private double? TryReadOfferRoubles(IOffered def, string traderId)
     {
         var source = new MongoId(def.SourceTpl);
         if (!tradersTable.TryGetValue(new MongoId(traderId), out var trader) || trader.Assort == null) return null;
@@ -351,7 +361,7 @@ public sealed class ItemIntegrations(
     /// SPT 4.1.6 never restores a decremented StackObjectsCount on restock (the "pristine" assort is the
     /// live one) but resets each profile's purchase counts, so this is what refills to the limit per restock.
     /// </summary>
-    private void AddOffer(CloneDef def, OfferDef offer)
+    private void AddOffer(IOffered def, OfferDef offer)
     {
         if (!tradersTable.TryGetValue(new MongoId(offer.TraderId), out var trader) || trader.Assort == null)
         {
@@ -364,7 +374,7 @@ public sealed class ItemIntegrations(
 
         List<Item> parts;
         if (def.PresetId == null)
-            parts = [new Item { Id = new MongoId(offer.AssortIds[0]), Template = def.CloneTpl }];
+            parts = [new Item { Id = new MongoId(offer.AssortIds[0]), Template = def.SoldTpl }];
         else if (globalTable.ItemPresets.TryGetValue(new MongoId(def.PresetId), out var preset) && preset.Items.Count == offer.AssortIds.Length)
             parts = preset.Items;
         else

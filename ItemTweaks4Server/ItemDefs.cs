@@ -26,6 +26,17 @@ internal sealed record OfferDef(
     public string TraderName => Ids.TraderNames[TraderId];
 }
 
+/// <summary>An item sold through <see cref="OfferDef"/>s. Prices are read for SourceTpl; the offer holds SoldTpl.</summary>
+internal interface IOffered
+{
+    string Name { get; }
+    string SourceName { get; }
+    string SourceTpl { get; }
+    string SoldTpl { get; }
+    string? PresetId { get; }
+    OfferDef[] Offers { get; }
+}
+
 /// <summary>A clone of an existing item. Ids must match the item JSON in ConfigDir.</summary>
 /// <param name="ConfigDir">Directory (relative to the mod folder) with the WTT item JSON. WTT loads a directory recursively and one bad item must not
 /// block the others, so an optional source gets a directory of its own, loaded only when the source exists.</param>
@@ -50,7 +61,19 @@ internal sealed record CloneDef(
     OfferDef[] Offers,
     bool IsVariant = true,
     bool AddToSpecialSlots = false,
-    bool AddToSecureContainers = false);
+    bool AddToSecureContainers = false) : IOffered
+{
+    public string SoldTpl => CloneTpl;
+}
+
+/// <summary>An existing item (no clone) sold as is; its offers are skipped with a log line when SourceMod did not add it.</summary>
+internal sealed record ResaleDef(string Name, string Tpl, string SourceMod, OfferDef[] Offers) : IOffered
+{
+    public string SourceName => Name;
+    public string SourceTpl => Tpl;
+    public string SoldTpl => Tpl;
+    public string? PresetId => null;
+}
 
 /// <summary>Fixed ids and the clone list. Item and preset ids must match the JSON under db/.</summary>
 internal static class Ids
@@ -67,6 +90,7 @@ internal static class Ids
     public const string Jaeger = "5c0647fdd443bc2504c2d371";
     public const string Mechanic = "5a7c2eca46aef81a7ca2145d";
     public const string NatoQuartermaster = "bb371fed0e82b224f2d82c0d";
+    public const string Aishi = "690766de550bc322a810ea1e";
 
     public static readonly IReadOnlyDictionary<string, string> TraderNames = new Dictionary<string, string>
     {
@@ -75,6 +99,7 @@ internal static class Ids
         [Jaeger] = "Jaeger",
         [Mechanic] = "Mechanic",
         [NatoQuartermaster] = "NATO Quartermaster",
+        [Aishi] = "Aishi",
     };
 
     public const string Aek973 = "686093d590c3dce07984c38a";
@@ -100,6 +125,10 @@ internal static class Ids
     public const string Ps320 = "5c0517910db83400232ffee5";
     public const string Ps321 = "41a2f314a21e64a4862d6bd1";
     public const string TarkovskayaVodka = "5d40407c86f774318526545a";
+
+    public const string IsbRaidBackpack = "693a2a8c8ca17192ef82abae";
+    public const string IsbParatus = "6a12553381219c9c8d5e5e0e";
+    public const string IsbDeathShadow = "6984d63f164eb72f4dfb473b";
 }
 
 internal static class Clones
@@ -186,5 +215,30 @@ internal static class Clones
         [
             new(Ids.NatoQuartermaster, 1, ["1dc853e420eb2b1fbe1d0e5d"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
         ], IsVariant: false, AddToSpecialSlots: true, AddToSecureContainers: true),
+    ];
+}
+
+/// <summary>Existing ISB-Aishi items resold by NATO Quartermaster.</summary>
+internal static class Resales
+{
+    private const string Isb = "ISB-Aishi";
+
+    public static readonly ResaleDef[] All =
+    [
+        // Aishi only barters it: 1.5x its flea price (358022).
+        new("6Sh118 raid backpack (USEC-ISB)", Ids.IsbRaidBackpack, Isb,
+        [
+            new(Ids.NatoQuartermaster, 1, ["36227e5c4671b90b0c914952"], 3, FixedPrice: 537033, Optional: true),
+        ]),
+        // 2x Aishi's price (1290 USD), in roubles.
+        new("Expanded 3V Gear Paratus 3-Day backpack (USEC-ISB)", Ids.IsbParatus, Isb,
+        [
+            new(Ids.NatoQuartermaster, 1, ["3d2842a2d11daf1400fd85c9"], 3, OwnPriceTrader: Ids.Aishi, Optional: true),
+        ]),
+        // Not sold by Aishi: 2x its handbook price (69842).
+        new("Modified Death Shadow lightweight armored mask (USEC-ISB)", Ids.IsbDeathShadow, Isb,
+        [
+            new(Ids.NatoQuartermaster, 1, ["bd11e112b831027c9884bd7d"], 3, FixedPrice: 139684, Optional: true),
+        ]),
     ];
 }
