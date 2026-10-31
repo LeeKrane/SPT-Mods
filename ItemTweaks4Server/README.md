@@ -32,7 +32,7 @@ Adds modified clones of existing items, plus two new items (the spec-ops kit cas
 | Spec-ops kit case | NATO Quartermaster | 1 | 69000 USD | 1 |
 | Spec-ops key case | NATO Quartermaster | 1 | 69000 USD | 1 |
 
-  Prices are read at startup. If a source offer is missing a warning is logged and 2x the source handbook price (x1.25 for the NATO X-47) is used.
+  Prices are read at startup. If a source offer is missing a warning is logged and 2x the source handbook price (x1.25 for the NATO X-47) is used. An offer whose price needs a handbook price the item lacks is skipped with an error.
 - Bots: wherever a bot weighted pool (equipment slots, backpack, pockets, vest, secure container, special loot) lists the source, 25% of its weight moves to the clone (source keeps 75%), so pool totals are unchanged. The source's mod pool is copied to the clone, and the clone joins every weapon slot choice (for example magazine sets) that lists the source. Those slot choices are plain sets without weights, so the clone competes there on equal terms instead of at 25%. Progressive Bot System builds bot weapons from its own tier pools, so every tier / bot / slot of it gets the same treatment (reflection, no hard reference).
 - The X-47 and PS-321 clones are added to every slot, chamber, cartridge and grid filter, grid exclusion and conflicting-items list that lists their source, so they fit (and are kept out) exactly where the source is (scanned at startup, count logged).
 - Weapons share the source's weapon mastery.
@@ -42,7 +42,7 @@ Adds modified clones of existing items, plus two new items (the spec-ops kit cas
 |---|---|---|
 | 6Sh118 raid backpack (USEC-ISB), 54 slots | `693a2a8c8ca17192ef82abae` | 537033 (1.5x its flea price; Aishi only barters it) |
 | Expanded 3V Gear Paratus 3-Day backpack (USEC-ISB), 48 slots | `6a12553381219c9c8d5e5e0e` | 2x Aishi's price (1290 USD) in roubles, read at startup; 2x handbook (157800) when absent |
-| Modified Death Shadow lightweight armored mask (USEC-ISB), class 4 | `6984d63f164eb72f4dfb473b` | 139684 (2x handbook; Aishi does not sell it) |
+| Modified Death Shadow lightweight armored mask (USEC-ISB), class 4 | `6984d63f164eb72f4dfb473b` | 2x its handbook price (139684 now), read at startup; Aishi does not sell it |
 
 ## Why
 Stronger, rarer variants that still count for the source's quests and mastery.

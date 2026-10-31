@@ -7,6 +7,7 @@ namespace ItemTweaks4Server;
 /// <param name="FallbackPriceTrader">Used when OwnPriceTrader has no source offer: 2x that trader's source price times FallbackFactor.</param>
 /// <param name="Optional">The trader is a soft dependency: skipped with a log line when absent.</param>
 /// <param name="Barter">Paid with Count items of Tpl instead of money; no price is resolved.</param>
+/// <param name="HandbookFactor">Price is the source's handbook price times this, in roubles (read at startup, offer skipped when the source has none).</param>
 internal sealed record OfferDef(
     string TraderId,
     int LoyaltyLevel,
@@ -18,7 +19,8 @@ internal sealed record OfferDef(
     double FallbackFactor = 1,
     bool Optional = false,
     string? Currency = null,
-    (string Tpl, int Count)? Barter = null)
+    (string Tpl, int Count)? Barter = null,
+    double? HandbookFactor = null)
 {
     /// <summary>Payment currency tpl, roubles when null. Only FixedPrice supports another currency.</summary>
     public string CurrencyTpl => Currency ?? Ids.Roubles;
@@ -66,8 +68,8 @@ internal sealed record CloneDef(
     public string SoldTpl => CloneTpl;
 }
 
-/// <summary>An existing item (no clone) sold as is; its offers are skipped with a log line when SourceMod did not add it.</summary>
-internal sealed record ResaleDef(string Name, string Tpl, string SourceMod, OfferDef[] Offers) : IOffered
+/// <summary>An existing item (no clone) sold as is; its offers are skipped with a log line when the item does not exist.</summary>
+internal sealed record ResaleDef(string Name, string Tpl, OfferDef[] Offers) : IOffered
 {
     public string SourceName => Name;
     public string SourceTpl => Tpl;
@@ -221,24 +223,22 @@ internal static class Clones
 /// <summary>Existing ISB-Aishi items resold by NATO Quartermaster.</summary>
 internal static class Resales
 {
-    private const string Isb = "ISB-Aishi";
-
     public static readonly ResaleDef[] All =
     [
         // Aishi only barters it: 1.5x its flea price (358022).
-        new("6Sh118 raid backpack (USEC-ISB)", Ids.IsbRaidBackpack, Isb,
+        new("6Sh118 raid backpack (USEC-ISB)", Ids.IsbRaidBackpack,
         [
             new(Ids.NatoQuartermaster, 1, ["36227e5c4671b90b0c914952"], 3, FixedPrice: 537033, Optional: true),
         ]),
         // 2x Aishi's price (1290 USD), in roubles.
-        new("Expanded 3V Gear Paratus 3-Day backpack (USEC-ISB)", Ids.IsbParatus, Isb,
+        new("Expanded 3V Gear Paratus 3-Day backpack (USEC-ISB)", Ids.IsbParatus,
         [
             new(Ids.NatoQuartermaster, 1, ["3d2842a2d11daf1400fd85c9"], 3, OwnPriceTrader: Ids.Aishi, Optional: true),
         ]),
-        // Not sold by Aishi: 2x its handbook price (69842).
-        new("Modified Death Shadow lightweight armored mask (USEC-ISB)", Ids.IsbDeathShadow, Isb,
+        // Not sold by Aishi: 2x its handbook price.
+        new("Modified Death Shadow lightweight armored mask (USEC-ISB)", Ids.IsbDeathShadow,
         [
-            new(Ids.NatoQuartermaster, 1, ["bd11e112b831027c9884bd7d"], 3, FixedPrice: 139684, Optional: true),
+            new(Ids.NatoQuartermaster, 1, ["bd11e112b831027c9884bd7d"], 3, HandbookFactor: 2, Optional: true),
         ]),
     ];
 }

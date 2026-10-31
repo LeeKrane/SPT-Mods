@@ -51,20 +51,22 @@ public sealed class ItemIntegrations(
             }
             if (def.AddToSpecialSlots) Guard($"{def.Name} special slots", () => AddToSpecialSlots(def));
             if (def.AddToSecureContainers) Guard($"{def.Name} secure containers", () => AddToSecureContainers(def));
-            foreach (var offer in def.Offers)
-                Guard($"{def.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
+            AddOffers(def);
         }
         foreach (var def in Resales.All)
         {
-            if (!templateTable.Items.ContainsKey(new MongoId(def.Tpl)))
-            {
-                logger.LogInformation("[ItemTweaks4Server] {Mod} item {Name} ({Tpl}) not found, its offers skipped", def.SourceMod, def.Name, def.Tpl);
-                continue;
-            }
-            foreach (var offer in def.Offers)
-                Guard($"{def.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
+            if (templateTable.Items.ContainsKey(new MongoId(def.SoldTpl)))
+                AddOffers(def);
+            else
+                logger.LogInformation("[ItemTweaks4Server] Item {Name} ({Tpl}) not found (mod missing?), its offers skipped", def.Name, def.SoldTpl);
         }
         return Task.CompletedTask;
+    }
+
+    private void AddOffers(IOffered def)
+    {
+        foreach (var offer in def.Offers)
+            Guard($"{def.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
     }
 
     private void Guard(string what, Action action)
@@ -308,6 +310,7 @@ public sealed class ItemIntegrations(
     {
         if (offer.FixedPrice is { } fixedPrice) return fixedPrice;
         if (offer.CurrencyTpl != Ids.Roubles) throw new InvalidOperationException($"{def.Name}: a non-rouble offer needs a FixedPrice");
+        if (offer.HandbookFactor is { } handbookFactor) return Math.Round(HandbookRoubles(def) * handbookFactor);
 
         if (offer.OwnPriceTrader != null && TryReadOfferRoubles(def, offer.OwnPriceTrader) * 2 is > 0 and var own)
             return Math.Round(own);
@@ -326,10 +329,18 @@ public sealed class ItemIntegrations(
         }
 
         // Fallback: 2x source handbook price (the same as the clone's own handbook price for 2x clones).
-        var fallback = Math.Round(2 * handbookHelper.GetTemplatePrice(new MongoId(def.SourceTpl)) * factor);
+        var fallback = Math.Round(2 * HandbookRoubles(def) * factor);
         logger.LogWarning("[ItemTweaks4Server] {Source} price at {PriceTrader} not found, {Trader} offer for {Name} uses fallback {Price} RUB",
             def.SourceName, Ids.TraderNames[offer.FallbackPriceTrader ?? offer.OwnPriceTrader ?? offer.TraderId], offer.TraderName, def.Name, fallback);
         return fallback;
+    }
+
+    /// <summary>Handbook price of the source. Throws (offer skipped) when it has none: SPT reports a missing entry as 0 or 1, which would sell for nothing.</summary>
+    private double HandbookRoubles(IOffered def)
+    {
+        var price = handbookHelper.GetTemplatePrice(new MongoId(def.SourceTpl));
+        if (price <= 1) throw new InvalidOperationException($"{def.SourceName} has no handbook price, offer skipped");
+        return price;
     }
 
     /// <summary>Price of the trader's source root offer in roubles, or null when absent or not paid in money.</summary>
