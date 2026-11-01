@@ -4,13 +4,19 @@
 //
 // A tint cannot do this (multiplying red never gives orange), so the albedo itself is recolored: the model's _MainTex (bundle
 // textures are not CPU-readable) is blitted to a RenderTexture, read back, recolored per pixel in HSV and set on the renderer with a
-// MaterialPropertyBlock (shared materials untouched). One recolored copy per source texture and item, made once and kept.
+// MaterialPropertyBlock (shared materials untouched). One copy per texture name and item, made once per session and kept: the
+// bundle texture can be unloaded and reloaded between raids (new instance, same name and pixels), the copy stays valid.
+// Loot, inventory and icon models need the copy at once (icons are cached per template, the sync ObjectsFactory.CreateItem takes no
+// result from an unfinished task): read back with ReadPixels, pixels recolored on all cores, a one-time hitch per item per session,
+// usually in the stash. In-hands models (the in-raid case: another player injects one) never wait: AsyncGPUReadback, recolor on a
+// worker thread, upload on the main thread; the model keeps its vanilla colors until then and is skipped if the pooled model was
+// handed out again in the meantime. No graphics device (headless client): nothing is done.
 // Only materials whose _MainTex has the item's texture name are touched: the in-hands model is the arms rig with the syringe or kit
 // as a child, and the arms must stay as they are.
 //
-// Models: loot, inventory and icon models come from ObjectsFactory.CreateItemAsync (Plugin.CreateItemPostfix calls Apply), the
-// in-hands model (first and third person) from ObjectsFactory.CreateItemUsablePrefabAsync, which returns a completed task. Both are
-// pooled per bundle and shared with the vanilla item, so every reuse first restores the property blocks saved before recoloring.
+// Models: loot, inventory and icon models come from ObjectsFactory.CreateItemAsync (Plugin.CreateItemPostfix restores and calls Apply),
+// the in-hands model (first and third person) from ObjectsFactory.CreateItemUsablePrefabAsync. Both are pooled per bundle and shared
+// with the vanilla item; PropertyBlockMarker undoes our blocks on every reuse.
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -18,6 +24,7 @@ using EFT;
 using EFT.InventoryLogic;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Krane.ItemTweaks
 {
@@ -42,8 +49,19 @@ namespace Krane.ItemTweaks
             { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec { Texture = "item_meds_survival_first_aid_rollup_kit_LOD0_diff", Map = c => LightGray(c, 0.38f, 1.4f) } },
         };
 
-        private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
-        private static readonly Dictionary<(int Source, MongoID Item), Texture2D> Cache = new Dictionary<(int, MongoID), Texture2D>();
+        // One entry per (texture name, item): Result once ready, Failed after an error (never retried), else in progress. Waiters get
+        // the copy, or null after a failure.
+        private sealed class Recolor
+        {
+            internal Texture2D Result;
+            internal bool Failed;
+            internal readonly List<Action<Texture2D>> Waiters = new List<Action<Texture2D>>();
+        }
+
+        private static readonly Dictionary<(string Texture, MongoID Item), Recolor> Recolors = new Dictionary<(string, MongoID), Recolor>();
+        private static bool? _hasGpu;
+
+        private static bool HasGpu => _hasGpu ?? (_hasGpu = SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null).Value;
 
         internal static void Init(Harmony harmony)
         {
@@ -51,31 +69,35 @@ namespace Krane.ItemTweaks
                 postfix: nameof(UsablePrefabPostfix));
         }
 
-        // The task is already completed (the prefab comes from the pool synchronously) and the caller uses the model right away.
+        // The pool usually returns a completed task and the caller uses the model at once (the sync CreateItemUsablePrefab unwraps it),
+        // so the task is never replaced: a finished model is handled now, an unfinished one when its task completes.
         private static void UsablePrefabPostfix(Item item, Task<GameObject> __result)
         {
-            if (item == null || __result == null || !__result.IsCompleted || __result.IsFaulted) return;
-            GameObject go = __result.Result;
-            if (go == null) return;
+            if (item == null || __result == null) return;
             var template = item.TemplateId;
-            Plugin.RunOnMainThread(() => Apply(go, template));
+            if (__result.IsCompleted)
+                Handle(__result, template);
+            else
+                __result.ContinueWith(t => Handle(t, template), TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        // Restores a pooled model, then recolors it when the template has a spec. Main thread only.
-        internal static void Apply(GameObject go, MongoID template)
+        private static void Handle(Task<GameObject> task, MongoID template)
         {
-            var marker = go.GetComponent<RecolorMarker>();
-            if (marker != null)
+            if (task.Status != TaskStatus.RanToCompletion || task.Result == null) return;
+            var go = task.Result;
+            Plugin.RunOnMainThread(() =>
             {
-                foreach (var (r, i, original) in marker.Saved)
-                {
-                    if (r != null) r.SetPropertyBlock(original, i);
-                }
-                UnityEngine.Object.DestroyImmediate(marker);
-                marker = null;
-            }
-            if (!Specs.TryGetValue(template, out var spec)) return;
+                PropertyBlockMarker.Restore(go);
+                Apply(go, template, sync: false);
+            });
+        }
 
+        // Recolors a model that was just restored, when the template has a spec. Main thread only. sync: the copy is made now if not
+        // ready yet, else the model gets it once the background recolor is done.
+        internal static void Apply(GameObject go, MongoID template, bool sync)
+        {
+            if (!Specs.TryGetValue(template, out var spec) || !HasGpu) return;
+            PropertyBlockMarker marker = null;
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
             {
                 if (!(r is MeshRenderer) && !(r is SkinnedMeshRenderer)) continue;
@@ -83,74 +105,180 @@ namespace Krane.ItemTweaks
                 for (int i = 0; i < mats.Length; i++)
                 {
                     var m = mats[i];
-                    if (m == null || !m.HasProperty(MainTexId)) continue;
-                    var source = m.GetTexture(MainTexId);
+                    if (m == null || !m.HasProperty(Plugin.MainTexId)) continue;
+                    var source = m.GetTexture(Plugin.MainTexId);
                     if (source == null || source.name != spec.Texture) continue;
-                    var recolored = Recolored(source, template, spec);
-                    if (recolored == null) continue;
-
-                    var mpb = new MaterialPropertyBlock();
-                    MaterialPropertyBlock original = null;
-                    if (r.HasPropertyBlock())
+                    // The marker doubles as the model's identity: Restore destroys it when the pooled model is handed out again,
+                    // so a late copy is only set if this marker is still the model's.
+                    if (marker == null) marker = PropertyBlockMarker.For(go);
+                    var renderer = r;
+                    var index = i;
+                    var mine = marker;
+                    WhenRecolored(source, template, spec, sync, copy =>
                     {
-                        r.GetPropertyBlock(mpb, i);
-                        if (!mpb.isEmpty)
-                        {
-                            original = new MaterialPropertyBlock();
-                            r.GetPropertyBlock(original, i);
-                        }
-                    }
-                    if (marker == null) marker = go.AddComponent<RecolorMarker>();
-                    marker.Saved.Add((r, i, original));
-                    mpb.SetTexture(MainTexId, recolored);
-                    r.SetPropertyBlock(mpb, i);
+                        if (copy == null || mine == null || go == null || renderer == null || go.GetComponent<PropertyBlockMarker>() != mine) return;
+                        var mpb = mine.Edit(renderer, index);
+                        mpb.SetTexture(Plugin.MainTexId, copy);
+                        renderer.SetPropertyBlock(mpb, index);
+                    });
                 }
             }
         }
 
-        private sealed class RecolorMarker : MonoBehaviour
+        // Calls done (main thread) with the recolored copy, or null after a failure: now when ready (sync: made now if needed), else
+        // once the background recolor finishes.
+        private static void WhenRecolored(Texture source, MongoID template, Spec spec, bool sync, Action<Texture2D> done)
         {
-            internal readonly List<(Renderer Renderer, int Index, MaterialPropertyBlock Original)> Saved = new List<(Renderer, int, MaterialPropertyBlock)>();
-        }
-
-        private static Texture2D Recolored(Texture source, MongoID template, Spec spec)
-        {
-            var key = (source.GetInstanceID(), template);
-            if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
-            try
+            var key = (source.name, template);
+            if (!Recolors.TryGetValue(key, out var recolor))
             {
-                int w = source.width, h = source.height;
-                var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-                var previous = RenderTexture.active;
-                Texture2D copy;
+                recolor = new Recolor();
+                Recolors[key] = recolor;
+                if (!sync)
+                {
+                    recolor.Waiters.Add(done);
+                    try { StartAsync(source, spec, recolor); }
+                    catch (Exception e) { Fail(recolor, e); }
+                    return;
+                }
+            }
+            if (recolor.Result == null && !recolor.Failed && sync)
+            {
+                // Also when a background recolor is running: it is discarded when it finishes.
                 try
                 {
-                    Graphics.Blit(source, rt);
-                    RenderTexture.active = rt;
-                    copy = new Texture2D(w, h, TextureFormat.RGBA32, true, false);
-                    copy.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
+                    recolor.Result = MakeNow(source, spec);
+                    Notify(recolor, recolor.Result);
                 }
-                finally
+                catch (Exception e)
                 {
-                    RenderTexture.active = previous;
-                    RenderTexture.ReleaseTemporary(rt);
+                    Fail(recolor, e);
                 }
+            }
+            if (recolor.Result != null) done(recolor.Result);
+            else if (recolor.Failed) done(null);
+            else recolor.Waiters.Add(done);
+        }
+
+        // Size and sampling of the source, read up front: the async path builds the copy after the source may have been unloaded.
+        private static Func<Texture2D> CopyFactory(Texture source)
+        {
+            int w = source.width, h = source.height, aniso = source.anisoLevel;
+            var name = source.name + "_krane";
+            var wrap = source.wrapMode;
+            var filter = source.filterMode;
+            return () => new Texture2D(w, h, TextureFormat.RGBA32, true, false)
+            {
+                name = name,
+                wrapMode = wrap,
+                filterMode = filter,
+                anisoLevel = aniso,
+                hideFlags = HideFlags.HideAndDontSave,
+            };
+        }
+
+        private static Texture2D MakeNow(Texture source, Spec spec)
+        {
+            int w = source.width, h = source.height;
+            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var previous = RenderTexture.active;
+            Texture2D copy = null;
+            try
+            {
+                Graphics.Blit(source, rt);
+                RenderTexture.active = rt;
+                copy = CopyFactory(source)();
+                copy.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
+                RenderTexture.active = previous;
                 var pixels = copy.GetPixels32();
-                for (int p = 0; p < pixels.Length; p++) pixels[p] = spec.Map(pixels[p]);
+                MapAll(pixels, spec);
                 copy.SetPixels32(pixels);
                 copy.Apply(true, true);
-                copy.name = source.name + "_krane";
-                copy.wrapMode = source.wrapMode;
-                copy.filterMode = source.filterMode;
-                copy.anisoLevel = source.anisoLevel;
-                copy.hideFlags = HideFlags.HideAndDontSave;
-                Cache[key] = copy;
                 return copy;
             }
-            catch (Exception e)
+            catch
             {
-                Plugin.Log.LogError(e);
-                return null;
+                if (copy != null) UnityEngine.Object.Destroy(copy);
+                throw;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(rt);
+            }
+        }
+
+        // Rows split over the cores; the HSV helpers are plain math, safe off the main thread.
+        private static void MapAll(Color32[] pixels, Spec spec)
+        {
+            const int chunk = 16384;
+            var parts = (pixels.Length + chunk - 1) / chunk;
+            Parallel.For(0, parts, part =>
+            {
+                var end = Math.Min(pixels.Length, (part + 1) * chunk);
+                for (int p = part * chunk; p < end; p++) pixels[p] = spec.Map(pixels[p]);
+            });
+        }
+
+        private static void StartAsync(Texture source, Spec spec, Recolor recolor)
+        {
+            int w = source.width, h = source.height;
+            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            Graphics.Blit(source, rt);
+            var name = source.name;
+            var newCopy = CopyFactory(source);
+            AsyncGPUReadback.Request(rt, 0, TextureFormat.RGBA32, request =>
+            {
+                var pixels = request.hasError ? null : request.GetData<Color32>().ToArray();
+                RenderTexture.ReleaseTemporary(rt);
+                if (pixels == null)
+                {
+                    Fail(recolor, new InvalidOperationException("GPU readback of " + name + " failed"));
+                    return;
+                }
+                Task.Run(() => MapAll(pixels, spec)).ContinueWith(t => Plugin.RunOnMainThread(() =>
+                {
+                    // A sync recolor got there first (or failed): keep that outcome.
+                    if (recolor.Result != null || recolor.Failed) return;
+                    if (t.IsFaulted)
+                    {
+                        Fail(recolor, t.Exception);
+                        return;
+                    }
+                    Texture2D copy = null;
+                    try
+                    {
+                        copy = newCopy();
+                        copy.SetPixels32(pixels);
+                        copy.Apply(true, true);
+                    }
+                    catch (Exception e)
+                    {
+                        if (copy != null) UnityEngine.Object.Destroy(copy);
+                        Fail(recolor, e);
+                        return;
+                    }
+                    recolor.Result = copy;
+                    Notify(recolor, copy);
+                }));
+            });
+        }
+
+        private static void Fail(Recolor recolor, Exception e)
+        {
+            recolor.Failed = true;
+            Plugin.Log.LogError(e);
+            Notify(recolor, null);
+        }
+
+        private static void Notify(Recolor recolor, Texture2D copy)
+        {
+            var waiters = recolor.Waiters.ToArray();
+            recolor.Waiters.Clear();
+            foreach (var waiter in waiters)
+            {
+                try { waiter(copy); }
+                catch (Exception e) { Plugin.Log.LogError(e); }
             }
         }
 

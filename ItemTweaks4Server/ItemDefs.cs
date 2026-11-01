@@ -32,9 +32,10 @@ internal sealed record OfferDef(
 /// <param name="SourceMod">Mod that adds the source item (or that RequiredType belongs to), null for vanilla. Its absence skips the clone.</param>
 /// <param name="PresetId">Default preset of a weapon clone, null for an item sold on its own.</param>
 /// <param name="ShareMastery">Add the clone to every weapon mastery entry holding the source.</param>
-/// <param name="ReplicateFilters">Add the clone to every slot, cartridge and grid filter holding the source.</param>
-/// <param name="IsVariant">A stronger variant of the source: joins its quests, bot pools and filters (when ReplicateFilters). False for an unrelated new item
-/// that merely reuses the source's model.</param>
+/// <param name="ReplicateFilters">Add the clone to every slot, cartridge and grid filter (and exclusion / conflict list) holding the source, so it fits
+/// wherever the source fits. Independent of IsVariant.</param>
+/// <param name="IsVariant">A stronger variant of the source: joins its quests and bot pools. False for an unrelated new item that merely reuses the
+/// source's model, or for an item that only shares the source's filters (ReplicateFilters).</param>
 /// <param name="AddToSpecialSlots">Add the clone to the filter of every slot named SpecialSlot*.</param>
 /// <param name="AddToSecureContainers">Add the clone to the grid filter of every secured container whose filter lists the key tool.</param>
 /// <param name="RequiredType">Full name of a type of SourceMod. The clone needs that mod (e.g. its bundles) although the source is vanilla: skipped
@@ -240,10 +241,10 @@ internal static class ItemOffers
 {
     public static readonly ItemOfferDef[] All =
     [
-        // Same price and limit as Aishi's own offer (LL4, 51 USD, 1 per restock).
+        // Same price as Aishi's own offer (LL4, 51 USD, 1 per restock), 3 per restock.
         new("Modified MCX-SPEAR 6.8x51 upper receiver (Black)", Ids.ModSpearUpperBlack, "ISB-Aishi",
         [
-            new(Ids.NatoQuartermaster, 1, ["0dc14be2b961e488099a0b60"], 1, FixedPrice: 51, Optional: true, Currency: Ids.Usd),
+            new(Ids.NatoQuartermaster, 1, ["0dc14be2b961e488099a0b60"], 3, FixedPrice: 51, Optional: true, Currency: Ids.Usd),
         ]),
     ];
 }

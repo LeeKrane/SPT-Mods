@@ -49,7 +49,7 @@ public sealed class ItemCreation(
                         logger.LogError("[ItemTweaks4Server] Source item {Source} ({Tpl}) not found, {Name} skipped", def.SourceName, def.SourceTpl, def.Name);
                 }
                 if (missing.Count > 0) continue;
-                var absent = defs.Where(d => d.RequiredType != null && !IsTypeLoaded(d.RequiredType)).ToList();
+                var absent = defs.Where(d => d.RequiredType != null && LoadedTypes.Find(d.RequiredType) == null).ToList();
                 foreach (var def in absent)
                     logger.LogInformation("[ItemTweaks4Server] {Mod} not installed, skipping {Name}", def.SourceMod, def.Name);
                 if (absent.Count > 0) continue;
@@ -63,9 +63,6 @@ public sealed class ItemCreation(
             }
         }
     }
-
-    private static bool IsTypeLoaded(string typeName) =>
-        AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetType(typeName) != null);
 
     private void Finish(CloneDef def)
     {

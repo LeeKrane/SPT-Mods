@@ -156,7 +156,7 @@ namespace Krane.ItemTweaks
             }
         }
 
-        // Tint/Untint touch Unity objects, so they must run on the main thread. CreateItemAsync's own continuations are
+        // Tint/Restore touch Unity objects, so they must run on the main thread. CreateItemAsync's own continuations are
         // resumed by Diz.Jobs.JobScheduler (JobAwaiter.OnCompleted -> AddContinuation), driven from the main thread, but the
         // Task we are handed can be awaited anywhere, so do not rely on that: marshal through a queue drained in Update.
         private static int _mainThread;
@@ -203,10 +203,12 @@ namespace Krane.ItemTweaks
             {
                 await RunOnMainThread(() =>
                 {
-                    // Always start from the untinted state: a pooled model may carry the other case's tint.
-                    Untint(go);
+                    // Always start from the original state: a pooled model may carry another item's tint or recolor.
+                    PropertyBlockMarker.Restore(go);
                     if (spec != null) Tint(go, spec.Color(), spec.Flat(), spec.Multiply);
-                    MedRecolor.Apply(go, template);
+                    // Synchronous: icons are rendered from this model right after it is returned, and the sync
+                    // ObjectsFactory.CreateItem (loot) takes no result from an unfinished task.
+                    MedRecolor.Apply(go, template, sync: true);
                 });
             }
             catch (Exception e)
@@ -216,16 +218,10 @@ namespace Krane.ItemTweaks
             return go;
         }
 
-        // Remembers the property blocks the renderers had before tinting (null entry = none), so Untint restores exactly those.
-        private class TintMarker : MonoBehaviour
-        {
-            internal readonly List<(Renderer Renderer, int Index, MaterialPropertyBlock Original)> Saved = new List<(Renderer, int, MaterialPropertyBlock)>();
-        }
-
         private static Texture2D _white;
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
+        internal static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
 
         private static void Tint(GameObject go, Color c, bool flat, bool multiply)
@@ -237,7 +233,7 @@ namespace Krane.ItemTweaks
                 _white.Apply();
                 _white.hideFlags = HideFlags.HideAndDontSave;
             }
-            var marker = go.AddComponent<TintMarker>();
+            var marker = PropertyBlockMarker.For(go);
             var renderers = go.GetComponentsInChildren<Renderer>(true);
             foreach (var r in renderers)
             {
@@ -247,15 +243,7 @@ namespace Krane.ItemTweaks
                 {
                     var m = mats[i];
                     if (m == null) continue;
-                    var mpb = new MaterialPropertyBlock();
-                    if (r.HasPropertyBlock()) r.GetPropertyBlock(mpb, i);
-                    MaterialPropertyBlock original = null;
-                    if (!mpb.isEmpty)
-                    {
-                        original = new MaterialPropertyBlock();
-                        r.GetPropertyBlock(original, i);
-                    }
-                    marker.Saved.Add((r, i, original));
+                    var mpb = marker.Edit(r, i);
                     if (m.HasProperty(ColorId)) mpb.SetColor(ColorId, multiply ? m.GetColor(ColorId) * c : c);
                     if (m.HasProperty(BaseColorId)) mpb.SetColor(BaseColorId, multiply ? m.GetColor(BaseColorId) * c : c);
                     if (flat)
@@ -266,19 +254,6 @@ namespace Krane.ItemTweaks
                     r.SetPropertyBlock(mpb, i);
                 }
             }
-        }
-
-        // The models come from pools shared with the original items (and between our two cases): undo our tint when a
-        // pooled, tinted instance is handed to another template.
-        private static void Untint(GameObject go)
-        {
-            var marker = go.GetComponent<TintMarker>();
-            if (marker == null) return;
-            foreach (var (r, i, original) in marker.Saved)
-            {
-                if (r != null) r.SetPropertyBlock(original, i);
-            }
-            UnityEngine.Object.DestroyImmediate(marker);
         }
     }
 }

@@ -27,11 +27,6 @@ public sealed class ItemIntegrations(
     HandbookHelper handbookHelper,
     IServiceProvider services) : IOnLoad
 {
-    // Looked up once: scanning every loaded assembly per clone is wasted work.
-    private readonly Lazy<Type?> apbsLoaderType = new(() => AppDomain.CurrentDomain.GetAssemblies()
-        .Select(a => a.GetType("ProgressiveBotSystem.Helpers.DataLoader"))
-        .FirstOrDefault(t => t != null));
-
     public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         foreach (var def in Clones.All)
@@ -268,7 +263,7 @@ public sealed class ItemIntegrations(
     /// </summary>
     private void AddToApbs(CloneDef def)
     {
-        var loaderType = apbsLoaderType.Value;
+        var loaderType = LoadedTypes.Find("ProgressiveBotSystem.Helpers.DataLoader");
         if (loaderType == null || services.GetService(loaderType) is not { } loader)
         {
             logger.LogInformation("[ItemTweaks4Server] Progressive Bot System not installed, skipping its bot pools for {Name}", def.Name);
