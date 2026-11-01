@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.UI.dll" Private="false" />
   </ItemGroup>
 </Project>

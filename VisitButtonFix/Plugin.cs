@@ -8,10 +8,12 @@
 // which keeps its size and on-screen position while scrolling.
 using System.Collections.Generic;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using EFT.UI;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Krane.VisitButtonFix
 {
@@ -25,6 +27,12 @@ namespace Krane.VisitButtonFix
         private void Awake()
         {
             Log = Logger;
+            // Without TraderScrolling, VisitAPI's own placement is correct.
+            if (!Chainloader.PluginInfos.ContainsKey("com.kaeno.TraderScrolling"))
+            {
+                Log.LogInfo("Kaeno-TraderScrolling not loaded, nothing to fix");
+                return;
+            }
             new Harmony("krane.visitbuttonfix").PatchAll(typeof(Plugin).Assembly);
         }
     }
@@ -51,13 +59,15 @@ namespace Krane.VisitButtonFix
                     if (c != null && c.gameObject.activeInHierarchy) { card = (RectTransform)c.transform; break; }
                 if (card == null) return;
 
+                // TraderScrolling re-anchors the cards in the same frame; lay them out before measuring.
+                if (card.parent is RectTransform cards) LayoutRebuilder.ForceRebuildLayoutImmediate(cards);
+
                 // Same rule as VisitAPI (bottom pivot on the cards' top edge), measured on a card.
                 var corners = new Vector3[4];
                 card.GetWorldCorners(corners);
                 var before = button.anchoredPosition.y;
                 var topGap = parent.InverseTransformPoint(corners[1]).y - parent.rect.yMax;
                 button.anchoredPosition = new Vector2(0f, topGap);
-                button.SetAsLastSibling();
 
                 if (!_logged)
                 {
