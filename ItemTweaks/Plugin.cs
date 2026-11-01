@@ -1,5 +1,6 @@
-// Client side of the two ItemTweaks4Server cases: the Spec-ops kit case (template f39e1020a6eb538f07653b87, a clone of the
-// Dogtag case) and the Spec-ops key case (template c40d4da0b8d5434d00fffb4c, a clone of the Gingy keychain).
+// Client side of the ItemTweaks4Server cases: the Spec-ops kit case (template f39e1020a6eb538f07653b87, a clone of the
+// Dogtag case), the Spec-ops key case (template c40d4da0b8d5434d00fffb4c, a clone of the Gingy keychain) and the Redline dossier
+// (template 34c6e81189d757ca98a05adb, a clone of the S I C C pouch; look only, no weight change).
 //
 // Weight: all weight in the game funnels through ContainerExtensions.TotalWeight(IContainer) (sum of the
 // children's TotalWeight), called by ContainerCollection.TotalWeight, which Inventory.TotalWeight/equipment
@@ -36,10 +37,12 @@ namespace Krane.ItemTweaks
     {
         internal const string CaseId = "f39e1020a6eb538f07653b87";
         internal const string KeyCaseId = "c40d4da0b8d5434d00fffb4c";
+        internal const string RedlineId = "34c6e81189d757ca98a05adb";
 
         internal static ManualLogSource Log;
         private static readonly MongoID CaseMongoId = CaseId;
         private static readonly MongoID KeyCaseMongoId = KeyCaseId;
+        private static readonly MongoID RedlineMongoId = RedlineId;
 
         // Per-case behavior: weight multiplier and look. Color/Flat are read live from the config. Multiply: multiply the material's own
         // color by the tint instead of replacing it.
@@ -53,10 +56,13 @@ namespace Krane.ItemTweaks
 
         private static readonly CaseSpec KitCase = new CaseSpec { Color = () => TintColor.Value, Flat = () => FlatTint.Value };
         private static readonly CaseSpec KeyCase = new CaseSpec { Color = () => KeyTintColor.Value, Flat = () => false, Multiply = true };
+        // Redline dossier: look only, its contents keep their weight.
+        private static readonly CaseSpec Redline = new CaseSpec { WeightMultiplier = 1f, Color = () => RedlineTintColor.Value, Flat = () => false, Multiply = true };
         private static readonly Dictionary<MongoID, CaseSpec> Cases = new Dictionary<MongoID, CaseSpec>
         {
             { CaseMongoId, KitCase },
             { KeyCaseMongoId, KeyCase },
+            { RedlineMongoId, Redline },
         };
 
         internal static ConfigEntry<int> WeightReduction;
@@ -64,6 +70,7 @@ namespace Krane.ItemTweaks
         internal static ConfigEntry<bool> FlatTint;
         internal static ConfigEntry<int> KeyWeightReduction;
         internal static ConfigEntry<Color> KeyTintColor;
+        internal static ConfigEntry<Color> RedlineTintColor;
 
         private void Awake()
         {
@@ -93,6 +100,8 @@ namespace Krane.ItemTweaks
                 "Spec-ops kit case: replace the albedo texture with a flat color so it comes out light gray. Off: only multiply the existing texture by the color (stays dark). Changes apply to icons generated after a game restart.");
             KeyTintColor = Config.Bind("Look", "Key Case Color", new Color(0.75f, 0.75f, 0.75f, 1f),
                 "Spec-ops key case: color the Gingy keychain model and icon are multiplied by (darkens it). Changes apply to icons generated after a game restart.");
+            RedlineTintColor = Config.Bind("Look", "Redline Dossier Color", new Color(0.5f, 0.5f, 0.5f, 1f),
+                "Redline dossier: color the S I C C pouch model and icon are multiplied by (darkens it). Changes apply to icons generated after a game restart.");
 
             var h = new Harmony("krane.itemtweaks");
             SafePatch(h, typeof(Plugin), AccessTools.Method(typeof(ContainerExtensions), nameof(ContainerExtensions.TotalWeight), new[] { typeof(IContainer) }),

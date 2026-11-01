@@ -127,6 +127,9 @@ internal static class Ids
 
     public const string ModSpearUpperBlack = "6892180ee9f15149b0677260";
     public const string Xm1184Ap = "699b54a97d3c1c9f69f616b6";
+
+    public const string Sicc = "5d235bb686f77443f4331278";
+    public const string RedlineDossier = "34c6e81189d757ca98a05adb";
 }
 
 internal static class Clones
@@ -235,6 +238,10 @@ internal static class Clones
         [
             new(Ids.Therapist, 4, ["8ddee9eda2fec1723cdb5fd0"], 1, FixedPrice: 578434),
         ], IsVariant: false, RequiredType: "Aishi.ModMetadata"),
+        // New case reusing the S I C C model (darkened by the client plugin): a 5x6 grid taking everything the SICC and the documents case take.
+        // Fits wherever the SICC fits, joins none of its quests or bot pools. Flea only (2x the SICC flea price), no trader.
+        new("Redline dossier", "S I C C organizational pouch", Ids.Sicc, Ids.RedlineDossier, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
+            [], IsVariant: false),
     ];
 }
 
