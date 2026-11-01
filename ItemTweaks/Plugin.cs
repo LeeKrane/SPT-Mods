@@ -171,6 +171,8 @@ namespace Krane.ItemTweaks
             }
         }
 
+        internal static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == _mainThread;
+
         internal static Task RunOnMainThread(Action action)
         {
             if (Thread.CurrentThread.ManagedThreadId == _mainThread)

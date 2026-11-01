@@ -3,14 +3,17 @@
 // instead of the dark Surv12 roll-up kit).
 //
 // A tint cannot do this (multiplying red never gives orange), so the albedo itself is recolored: the model's _MainTex (bundle
-// textures are not CPU-readable) is blitted to a RenderTexture, read back, recolored per pixel in HSV and set on the renderer with a
-// MaterialPropertyBlock (shared materials untouched). One copy per texture name and item, made once per session and kept: the
-// bundle texture can be unloaded and reloaded between raids (new instance, same name and pixels), the copy stays valid.
+// textures are not CPU-readable) is blitted to an sRGB RenderTexture, read back as raw sRGB bytes (no color conversion in either path),
+// recolored per pixel in HSV and set on the renderer with a MaterialPropertyBlock (shared materials untouched). One copy per texture
+// name and item, made once per session and kept: the bundle texture can be unloaded and reloaded between raids (new instance, same
+// name and pixels), the copy stays valid.
 // Loot, inventory and icon models need the copy at once (icons are cached per template, the sync ObjectsFactory.CreateItem takes no
-// result from an unfinished task): read back with ReadPixels, pixels recolored on all cores, a one-time hitch per item per session,
-// usually in the stash. In-hands models (the in-raid case: another player injects one) never wait: AsyncGPUReadback, recolor on a
-// worker thread, upload on the main thread; the model keeps its vanilla colors until then and is skipped if the pooled model was
-// handed out again in the meantime. No graphics device (headless client): nothing is done.
+// result from an unfinished task): ReadPixels plus a recolor on all cores, a one-time hitch per item per session, usually in the
+// stash. If a background recolor already has its pixels, that one is finished instead. In-hands models (the in-raid case: another
+// player injects one) never wait: AsyncGPUReadback, recolor on a worker thread, upload on the main thread; the model keeps its vanilla
+// colors until then and is skipped if the pooled model was handed out again in the meantime. A background recolor that fails or never
+// returns (10 s) is dropped and retried on the next request (not after 3 failures); only a failed synchronous recolor is final. No
+// graphics device (headless client): nothing is done.
 // Only materials whose _MainTex has the item's texture name are touched: the in-hands model is the arms rig with the syringe or kit
 // as a child, and the arms must stay as they are.
 //
@@ -24,6 +27,7 @@ using EFT;
 using EFT.InventoryLogic;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
 namespace Krane.ItemTweaks
@@ -49,14 +53,25 @@ namespace Krane.ItemTweaks
             { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec { Texture = "item_meds_survival_first_aid_rollup_kit_LOD0_diff", Map = c => LightGray(c, 0.38f, 1.4f) } },
         };
 
-        // One entry per (texture name, item): Result once ready, Failed after an error (never retried), else in progress. Waiters get
-        // the copy, or null after a failure.
+        // One entry per (texture name, item). Result once made; Failed after a failed synchronous recolor (final). Pending while a
+        // background recolor runs (Generation tells a stale callback apart, Mapping holds its worker once the pixels are read back).
+        // Waiters get the copy, or null when it could not be made.
         private sealed class Recolor
         {
             internal Texture2D Result;
             internal bool Failed;
+            internal bool Pending;
+            internal float StartedAt;
+            internal int Generation;
+            internal int AsyncFailures;
+            internal Task<Color32[]> Mapping;
+            internal Func<Texture2D> NewCopy;
             internal readonly List<Action<Texture2D>> Waiters = new List<Action<Texture2D>>();
         }
+
+        private const float AsyncTimeout = 10f;
+        private const int MaxAsyncFailures = 3;
+        private const GraphicsFormat Format = GraphicsFormat.R8G8B8A8_SRGB;
 
         private static readonly Dictionary<(string Texture, MongoID Item), Recolor> Recolors = new Dictionary<(string, MongoID), Recolor>();
         private static bool? _hasGpu;
@@ -70,25 +85,54 @@ namespace Krane.ItemTweaks
         }
 
         // The pool usually returns a completed task and the caller uses the model at once (the sync CreateItemUsablePrefab unwraps it),
-        // so the task is never replaced: a finished model is handled now, an unfinished one when its task completes.
+        // so the task is never replaced: a finished model is handled now, an unfinished one when its task completes. Nothing here may
+        // throw into the game's in-hands creation.
         private static void UsablePrefabPostfix(Item item, Task<GameObject> __result)
         {
-            if (item == null || __result == null) return;
-            var template = item.TemplateId;
-            if (__result.IsCompleted)
-                Handle(__result, template);
-            else
-                __result.ContinueWith(t => Handle(t, template), TaskContinuationOptions.ExecuteSynchronously);
+            try
+            {
+                if (item == null || __result == null) return;
+                var template = item.TemplateId;
+                if (__result.IsCompleted)
+                    Handle(__result, template);
+                else
+                    __result.ContinueWith(t => Handle(t, template), TaskContinuationOptions.ExecuteSynchronously);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError(e);
+            }
         }
 
         private static void Handle(Task<GameObject> task, MongoID template)
         {
-            if (task.Status != TaskStatus.RanToCompletion || task.Result == null) return;
+            if (task.Status != TaskStatus.RanToCompletion || ReferenceEquals(task.Result, null)) return;
             var go = task.Result;
+            // Hot path (every in-hands model of every player): items without a spec only need a restore when the pooled model carries ours.
+            if (!Specs.ContainsKey(template) && Plugin.IsMainThread)
+            {
+                try
+                {
+                    if (go != null && go.GetComponent<PropertyBlockMarker>() != null) PropertyBlockMarker.Restore(go);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogError(e);
+                }
+                return;
+            }
             Plugin.RunOnMainThread(() =>
             {
-                PropertyBlockMarker.Restore(go);
-                Apply(go, template, sync: false);
+                try
+                {
+                    if (go == null) return;
+                    PropertyBlockMarker.Restore(go);
+                    Apply(go, template, sync: false);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogError(e);
+                }
             });
         }
 
@@ -125,39 +169,75 @@ namespace Krane.ItemTweaks
             }
         }
 
-        // Calls done (main thread) with the recolored copy, or null after a failure: now when ready (sync: made now if needed), else
-        // once the background recolor finishes.
+        // Calls done (main thread) with the recolored copy, or null when it cannot be made: now when ready (sync: made now if needed),
+        // else once the background recolor finishes.
         private static void WhenRecolored(Texture source, MongoID template, Spec spec, bool sync, Action<Texture2D> done)
         {
             var key = (source.name, template);
             if (!Recolors.TryGetValue(key, out var recolor))
             {
-                recolor = new Recolor();
+                recolor = new Recolor { NewCopy = CopyFactory(source) };
                 Recolors[key] = recolor;
-                if (!sync)
-                {
-                    recolor.Waiters.Add(done);
-                    try { StartAsync(source, spec, recolor); }
-                    catch (Exception e) { Fail(recolor, e); }
-                    return;
-                }
             }
-            if (recolor.Result == null && !recolor.Failed && sync)
+            if (recolor.Result != null)
             {
-                // Also when a background recolor is running: it is discarded when it finishes.
-                try
-                {
-                    recolor.Result = MakeNow(source, spec);
-                    Notify(recolor, recolor.Result);
-                }
-                catch (Exception e)
-                {
-                    Fail(recolor, e);
-                }
+                done(recolor.Result);
+                return;
             }
-            if (recolor.Result != null) done(recolor.Result);
-            else if (recolor.Failed) done(null);
-            else recolor.Waiters.Add(done);
+            if (recolor.Failed)
+            {
+                done(null);
+                return;
+            }
+            if (recolor.Pending && Time.realtimeSinceStartup - recolor.StartedAt > AsyncTimeout)
+                DropAsync(recolor, new TimeoutException("GPU readback of " + source.name + " never returned"));
+
+            if (sync)
+            {
+                MakeSync(source, spec, recolor);
+                done(recolor.Result);
+                return;
+            }
+            if (recolor.AsyncFailures >= MaxAsyncFailures)
+            {
+                done(null);
+                return;
+            }
+            recolor.Waiters.Add(done);
+            if (recolor.Pending) return;
+            try
+            {
+                StartAsync(source, spec, recolor);
+            }
+            catch (Exception e)
+            {
+                DropAsync(recolor, e);
+            }
+        }
+
+        // Synchronous copy: the background recolor's pixels when it already has them, else read back now. A failure here is final.
+        private static void MakeSync(Texture source, Spec spec, Recolor recolor)
+        {
+            try
+            {
+                Color32[] ready = null;
+                if (recolor.Pending && recolor.Mapping != null)
+                {
+                    try { ready = recolor.Mapping.Result; }
+                    catch { ready = null; }
+                }
+                // Supersede the background recolor: its callbacks see another generation and stop.
+                recolor.Pending = false;
+                recolor.Mapping = null;
+                recolor.Generation++;
+                Finish(recolor, ready != null ? Upload(recolor, ready) : ReadNow(source, spec, recolor));
+            }
+            catch (Exception e)
+            {
+                recolor.Failed = true;
+                Plugin.Log.LogError(e);
+                Notify(recolor, null);
+            }
         }
 
         // Size and sampling of the source, read up front: the async path builds the copy after the source may have been unloaded.
@@ -177,18 +257,31 @@ namespace Krane.ItemTweaks
             };
         }
 
-        private static Texture2D MakeNow(Texture source, Spec spec)
+        private static RenderTexture BlitToTemporary(Texture source)
         {
-            int w = source.width, h = source.height;
-            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var rt = RenderTexture.GetTemporary(new RenderTextureDescriptor(source.width, source.height, Format, 0));
+            try
+            {
+                Graphics.Blit(source, rt);
+                return rt;
+            }
+            catch
+            {
+                RenderTexture.ReleaseTemporary(rt);
+                throw;
+            }
+        }
+
+        private static Texture2D ReadNow(Texture source, Spec spec, Recolor recolor)
+        {
+            var rt = BlitToTemporary(source);
             var previous = RenderTexture.active;
             Texture2D copy = null;
             try
             {
-                Graphics.Blit(source, rt);
                 RenderTexture.active = rt;
-                copy = CopyFactory(source)();
-                copy.ReadPixels(new Rect(0, 0, w, h), 0, 0, false);
+                copy = recolor.NewCopy();
+                copy.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
                 RenderTexture.active = previous;
                 var pixels = copy.GetPixels32();
                 MapAll(pixels, spec);
@@ -208,6 +301,22 @@ namespace Krane.ItemTweaks
             }
         }
 
+        private static Texture2D Upload(Recolor recolor, Color32[] pixels)
+        {
+            var copy = recolor.NewCopy();
+            try
+            {
+                copy.SetPixels32(pixels);
+                copy.Apply(true, true);
+                return copy;
+            }
+            catch
+            {
+                UnityEngine.Object.Destroy(copy);
+                throw;
+            }
+        }
+
         // Rows split over the cores; the HSV helpers are plain math, safe off the main thread.
         private static void MapAll(Color32[] pixels, Spec spec)
         {
@@ -220,55 +329,83 @@ namespace Krane.ItemTweaks
             });
         }
 
+        // Background recolor: readback in the requested sRGB format (raw bytes, as ReadPixels), recolor on a worker, upload on the main thread.
         private static void StartAsync(Texture source, Spec spec, Recolor recolor)
         {
-            int w = source.width, h = source.height;
-            var rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-            Graphics.Blit(source, rt);
+            var generation = ++recolor.Generation;
             var name = source.name;
-            var newCopy = CopyFactory(source);
-            AsyncGPUReadback.Request(rt, 0, TextureFormat.RGBA32, request =>
+            var rt = BlitToTemporary(source);
+            recolor.Pending = true;
+            recolor.StartedAt = Time.realtimeSinceStartup;
+            recolor.Mapping = null;
+            try
             {
-                var pixels = request.hasError ? null : request.GetData<Color32>().ToArray();
-                RenderTexture.ReleaseTemporary(rt);
-                if (pixels == null)
+                AsyncGPUReadback.Request(rt, 0, Format, request =>
                 {
-                    Fail(recolor, new InvalidOperationException("GPU readback of " + name + " failed"));
-                    return;
-                }
-                Task.Run(() => MapAll(pixels, spec)).ContinueWith(t => Plugin.RunOnMainThread(() =>
-                {
-                    // A sync recolor got there first (or failed): keep that outcome.
-                    if (recolor.Result != null || recolor.Failed) return;
-                    if (t.IsFaulted)
-                    {
-                        Fail(recolor, t.Exception);
-                        return;
-                    }
-                    Texture2D copy = null;
+                    Color32[] pixels = null;
                     try
                     {
-                        copy = newCopy();
-                        copy.SetPixels32(pixels);
-                        copy.Apply(true, true);
+                        if (!request.hasError) pixels = request.GetData<Color32>().ToArray();
                     }
-                    catch (Exception e)
+                    finally
                     {
-                        if (copy != null) UnityEngine.Object.Destroy(copy);
-                        Fail(recolor, e);
+                        RenderTexture.ReleaseTemporary(rt);
+                    }
+                    if (recolor.Generation != generation || !recolor.Pending) return;
+                    if (pixels == null)
+                    {
+                        DropAsync(recolor, new InvalidOperationException("GPU readback of " + name + " failed"));
                         return;
                     }
-                    recolor.Result = copy;
-                    Notify(recolor, copy);
-                }));
-            });
+                    recolor.Mapping = Task.Run(() =>
+                    {
+                        MapAll(pixels, spec);
+                        return pixels;
+                    });
+                    recolor.Mapping.ContinueWith(t => Plugin.RunOnMainThread(() =>
+                    {
+                        if (recolor.Generation != generation || !recolor.Pending) return;
+                        if (t.IsFaulted)
+                        {
+                            DropAsync(recolor, t.Exception);
+                            return;
+                        }
+                        try
+                        {
+                            recolor.Pending = false;
+                            recolor.Mapping = null;
+                            Finish(recolor, Upload(recolor, t.Result));
+                        }
+                        catch (Exception e)
+                        {
+                            DropAsync(recolor, e);
+                        }
+                    }));
+                });
+            }
+            catch
+            {
+                RenderTexture.ReleaseTemporary(rt);
+                throw;
+            }
         }
 
-        private static void Fail(Recolor recolor, Exception e)
+        // A background recolor that failed or got lost: its waiters get null (their models keep vanilla colors), the next request
+        // retries. Generation moves on so a late callback of it does nothing.
+        private static void DropAsync(Recolor recolor, Exception e)
         {
-            recolor.Failed = true;
-            Plugin.Log.LogError(e);
+            recolor.Pending = false;
+            recolor.Mapping = null;
+            recolor.Generation++;
+            recolor.AsyncFailures++;
+            Plugin.Log.LogWarning(e);
             Notify(recolor, null);
+        }
+
+        private static void Finish(Recolor recolor, Texture2D copy)
+        {
+            recolor.Result = copy;
+            Notify(recolor, copy);
         }
 
         private static void Notify(Recolor recolor, Texture2D copy)
