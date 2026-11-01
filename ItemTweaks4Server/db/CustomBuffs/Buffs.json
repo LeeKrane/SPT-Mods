@@ -59,7 +59,7 @@
       "Chance": 1,
       "Delay": 1,
       "Duration": 1500,
-      "Value": 0.15,
+      "Value": 0.075,
       "AbsoluteValue": true,
       "SkillName": ""
     },
@@ -68,7 +68,7 @@
       "Chance": 1,
       "Delay": 1,
       "Duration": 1500,
-      "Value": 0.15,
+      "Value": 0.075,
       "AbsoluteValue": true,
       "SkillName": ""
     },

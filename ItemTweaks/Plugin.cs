@@ -32,7 +32,7 @@ using UnityEngine;
 
 namespace Krane.ItemTweaks
 {
-    [BepInPlugin("krane.itemtweaks", "Krane's ItemTweaks", "1.0.0")]
+    [BepInPlugin("krane.itemtweaks", "Item Tweaks & Additions", "1.0.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal const string CaseId = "f39e1020a6eb538f07653b87";
