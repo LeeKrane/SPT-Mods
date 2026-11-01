@@ -126,6 +126,7 @@ internal static class Ids
     public const string Keta = "4f3445dcc79d0c4d911c6144";
 
     public const string ModSpearUpperBlack = "6892180ee9f15149b0677260";
+    public const string Xm1184Ap = "699b54a97d3c1c9f69f616b6";
 }
 
 internal static class Clones
@@ -246,5 +247,17 @@ internal static class ItemOffers
         [
             new(Ids.NatoQuartermaster, 1, ["0dc14be2b961e488099a0b60"], 3, FixedPrice: 51, Optional: true, Currency: Ids.Usd),
         ]),
+    ];
+}
+
+/// <summary>An existing item of another mod made available on the flea (dynamic offers by simulated players). SourceMod adds the item; its absence skips it.</summary>
+internal sealed record FleaItemDef(string Name, string ItemTpl, string SourceMod);
+
+internal static class FleaItems
+{
+    public static readonly FleaItemDef[] All =
+    [
+        // ISB-Aishi marks it unsellable and puts it on the item blacklist (WTT addtoItemBlacklist).
+        new("6.8x51mm SIG XM1184 AP", Ids.Xm1184Ap, "ISB-Aishi"),
     ];
 }
