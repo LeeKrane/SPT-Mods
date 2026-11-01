@@ -105,6 +105,8 @@ namespace Krane.ItemTweaks
             catch (Exception e) { Log.LogError(e); }
             try { MedRecolor.Init(h); }
             catch (Exception e) { Log.LogError(e); }
+            try { KetaMystery.Init(h); }
+            catch (Exception e) { Log.LogError(e); }
             Log.LogInfo("ItemTweaks loaded");
         }
 
