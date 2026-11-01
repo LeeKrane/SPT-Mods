@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
@@ -6,14 +7,16 @@ using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Enums;
+using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Tables;
+using SPTarkov.Server.Core.Services.Items;
 using SPTarkov.Server.Core.Utils.Json;
 
 namespace ItemTweaks4Server;
 
 /// <summary>
 /// Quests, bots (database and Progressive Bot System pools), slot filters and trader offers of every created clone, plus the
-/// extra trader offers of existing items (<see cref="ItemOffers"/>). TypePriority sits after
+/// extra trader offers and flea unblocks of existing items (<see cref="ItemOffers"/>). TypePriority sits after
 /// NATO Quartermaster (TraderRegistration + 2), which builds its assort in its own OnLoad, and before TraderCallbacks,
 /// RagfairCallbacks and PresetCallbacks so flea trader offers and presets pick everything up.
 /// </summary>
@@ -25,6 +28,8 @@ public sealed class ItemIntegrations(
     BotTable botTable,
     TradersTable tradersTable,
     HandbookHelper handbookHelper,
+    RagfairConfig ragfairConfig,
+    ItemFilterService itemFilterService,
     IServiceProvider services) : IOnLoad
 {
     public Task OnLoadAsync(CancellationToken cancellationToken)
@@ -61,8 +66,28 @@ public sealed class ItemIntegrations(
             var def = extra.AsCloneDef;
             foreach (var offer in extra.Offers)
                 Guard($"{extra.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
+            if (extra.Flea) Guard($"{extra.Name} flea", () => PutOnFlea(extra));
         }
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Flea-sellable, and off the two lists that keep an item out of the dynamic offers: the flea's custom blacklist and the item blacklist
+    /// cache the flea check reads (ItemHelper.IsValidItem -> ItemFilterService.IsItemBlacklisted). That cache is a copy of item.json's
+    /// blacklist made when ItemFilterService is built, so the config list itself is left alone: code reading it directly (loot) still
+    /// skips the item. Runs before RagfairCallbacks generates the offers.
+    /// </summary>
+    private void PutOnFlea(ItemOfferDef def)
+    {
+        var tpl = new MongoId(def.ItemTpl);
+        var props = templateTable.Items[tpl].Properties ?? throw new InvalidOperationException("item has no properties");
+        props.CanSellOnRagfair = true;
+        props.CanRequireOnRagfair = true;
+        var cache = typeof(ItemFilterService).GetField("ItemBlacklistCache", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(itemFilterService) as HashSet<MongoId>
+            ?? throw new MissingFieldException(nameof(ItemFilterService), "ItemBlacklistCache");
+        var itemBlacklist = cache.Remove(tpl);
+        var fleaBlacklist = ragfairConfig.Dynamic.Blacklist.Custom.Remove(tpl);
+        logger.LogInformation("[ItemTweaks4Server] {Name} put on the flea (was on item blacklist: {Item}, flea blacklist: {Flea})", def.Name, itemBlacklist, fleaBlacklist);
     }
 
     private void Guard(string what, Action action)

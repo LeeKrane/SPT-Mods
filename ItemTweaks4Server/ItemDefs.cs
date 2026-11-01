@@ -56,8 +56,9 @@ internal sealed record CloneDef(
     bool AddToSecureContainers = false,
     string? RequiredType = null);
 
-/// <summary>Extra trader offers of an existing item (not a clone). SourceMod adds the item; its absence skips the offers.</summary>
-internal sealed record ItemOfferDef(string Name, string ItemTpl, string? SourceMod, OfferDef[] Offers)
+/// <summary>Extra trader offers of an existing item (not a clone). SourceMod adds the item; its absence skips it.</summary>
+/// <param name="Flea">Put the item on the flea (dynamic offers by simulated players) although its mod made it unsellable or blacklisted it.</param>
+internal sealed record ItemOfferDef(string Name, string ItemTpl, string? SourceMod, OfferDef[] Offers, bool Flea = false)
 {
     /// <summary>The item as a "clone" of itself, so the clone offer code can add it. Only FixedPrice or Barter offers: there is no source to price from.</summary>
     public CloneDef AsCloneDef => new(Name, Name, ItemTpl, ItemTpl, "", SourceMod, null, ShareMastery: false, ReplicateFilters: false, Offers, IsVariant: false);
@@ -115,11 +116,11 @@ internal static class Ids
     public const string TarkovskayaVodka = "5d40407c86f774318526545a";
 
     public const string Propital = "5c0e530286f7747fa1419862";
-    public const string PropitalII = "3d8e6f5ae7ea46f17f0fa1a5";
+    public const string XPropital = "3d8e6f5ae7ea46f17f0fa1a5";
     public const string Adrenaline = "5c10c8fd86f7743d7d706df3";
-    public const string AdrenalineII = "746f40f23c943aa94650ab0b";
+    public const string XAdrenaline = "746f40f23c943aa94650ab0b";
     public const string Zagustin = "5c0e533786f7747fa23f4d47";
-    public const string ZagustinII = "3f5582d3b2ae5f2af6083599";
+    public const string XZagustin = "3f5582d3b2ae5f2af6083599";
     public const string Surv12 = "5d02797c86f774203f38e30a";
     public const string Surv16 = "6190dcad54cbff2ac9b7b8f4";
     public const string Mule = "5ed51652f6c34d2cc26336a1";
@@ -217,15 +218,15 @@ internal static class Clones
             new(Ids.NatoQuartermaster, 1, ["1dc853e420eb2b1fbe1d0e5d"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
         ], IsVariant: false, AddToSpecialSlots: true, AddToSecureContainers: true),
         // Improved meds: fit wherever the source fits, but join none of its quests or bot pools. Therapist LL4 at 2x the source flea price.
-        new("Propital II", "Propital", Ids.Propital, Ids.PropitalII, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        new("X-Propital", "Propital", Ids.Propital, Ids.XPropital, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
         [
             new(Ids.Therapist, 4, ["bf51445db5f2de0327519663"], 3, FixedPrice: 79456),
         ], IsVariant: false),
-        new("Adrenaline II", "Adrenaline", Ids.Adrenaline, Ids.AdrenalineII, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        new("X-Adrenaline", "Adrenaline", Ids.Adrenaline, Ids.XAdrenaline, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
         [
             new(Ids.Therapist, 4, ["3b2b0117138b12bb04d0c6ac"], 3, FixedPrice: 39812),
         ], IsVariant: false),
-        new("Zagustin II", "Zagustin", Ids.Zagustin, Ids.ZagustinII, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        new("X-Zagustin", "Zagustin", Ids.Zagustin, Ids.XZagustin, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
         [
             new(Ids.Therapist, 4, ["25bf892de7b0aa2d41571fe3"], 3, FixedPrice: 92504),
         ], IsVariant: false),
@@ -254,17 +255,7 @@ internal static class ItemOffers
         [
             new(Ids.NatoQuartermaster, 1, ["0dc14be2b961e488099a0b60"], 3, FixedPrice: 51, Optional: true, Currency: Ids.Usd),
         ]),
-    ];
-}
-
-/// <summary>An existing item of another mod made available on the flea (dynamic offers by simulated players). SourceMod adds the item; its absence skips it.</summary>
-internal sealed record FleaItemDef(string Name, string ItemTpl, string SourceMod);
-
-internal static class FleaItems
-{
-    public static readonly FleaItemDef[] All =
-    [
-        // ISB-Aishi marks it unsellable and puts it on the item blacklist (WTT addtoItemBlacklist).
-        new("6.8x51mm SIG XM1184 AP", Ids.Xm1184Ap, "ISB-Aishi"),
+        // ISB-Aishi marks it unsellable and puts it on the item blacklist (WTT addtoItemBlacklist). Flea only, no trader.
+        new("6.8x51mm SIG XM1184 AP", Ids.Xm1184Ap, "ISB-Aishi", [], Flea: true),
     ];
 }

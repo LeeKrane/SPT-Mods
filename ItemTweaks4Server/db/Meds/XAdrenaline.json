@@ -5,7 +5,7 @@
     "handbookParentId": "5b47574386f77428ca22b33a",
     "overrideProperties": {
       "medUseTime": 2,
-      "StimulatorBuffs": "KraneBuffsAdrenalineII",
+      "StimulatorBuffs": "KraneBuffsXAdrenaline",
       "effects_damage": {
         "Contusion": {
           "delay": 0,
@@ -21,8 +21,8 @@
     },
     "locales": {
       "en": {
-        "name": "Adrenaline II injector",
-        "shortName": "Adrenaline II",
+        "name": "X-Adrenaline injector",
+        "shortName": "X-Adrenaline",
         "description": "A refined adrenaline dose with strong short-term regeneration. Relieves pain and concussion and boosts endurance and strength."
       }
     },

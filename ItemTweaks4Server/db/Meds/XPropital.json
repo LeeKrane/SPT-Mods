@@ -5,7 +5,7 @@
     "handbookParentId": "5b47574386f77428ca22b33a",
     "overrideProperties": {
       "medUseTime": 2,
-      "StimulatorBuffs": "KraneBuffsPropitalII",
+      "StimulatorBuffs": "KraneBuffsXPropital",
       "effects_damage": {
         "Contusion": {
           "delay": 0,
@@ -21,8 +21,8 @@
     },
     "locales": {
       "en": {
-        "name": "Propital II regenerative stimulant injector",
-        "shortName": "Propital II",
+        "name": "X-Propital regenerative stimulant injector",
+        "shortName": "X-Propital",
         "description": "An improved, long-acting Propital formula. Stimulates regeneration for 15 minutes and relieves pain and concussion. Has side effects."
       }
     },

@@ -1,5 +1,5 @@
-// Client side of the ItemTweaks4Server med clones that reuse a vanilla model with other colors: Propital II (light orange instead
-// of yellow), Adrenaline II (dark orange instead of red), Zagustin II (dark violet instead of purple) and Surv16 (light gray
+// Client side of the ItemTweaks4Server med clones that reuse a vanilla model with other colors: X-Propital (light orange instead
+// of yellow), X-Adrenaline (dark orange instead of red), X-Zagustin (dark violet instead of purple) and Surv16 (light gray
 // instead of the dark Surv12 roll-up kit).
 //
 // A tint cannot do this (multiplying red never gives orange), so the albedo itself is recolored: the model's _MainTex (bundle
@@ -43,11 +43,11 @@ namespace Krane.ItemTweaks
         // Hue ranges and targets in degrees, tuned on the vanilla textures (stimulator_* 1024x1024, roll-up kit diffuse).
         private static readonly Dictionary<MongoID, Spec> Specs = new Dictionary<MongoID, Spec>
         {
-            // Propital II: yellow (about 50 degrees) to light orange.
+            // X-Propital: yellow (about 50 degrees) to light orange.
             { (MongoID)"3d8e6f5ae7ea46f17f0fa1a5", new Spec { Texture = "stimulator_propital", Map = c => HueShift(c, 50f, 30f, 32f, 0.8f, 1.3f) } },
-            // Adrenaline II: red to dark orange.
+            // X-Adrenaline: red to dark orange.
             { (MongoID)"746f40f23c943aa94650ab0b", new Spec { Texture = "stimulator_adrenaline", Map = c => HueShift(c, 0f, 25f, 24f, 1f, 1.15f) } },
-            // Zagustin II: purple (about 275 degrees) to dark violet.
+            // X-Zagustin: purple (about 275 degrees) to dark violet.
             { (MongoID)"3f5582d3b2ae5f2af6083599", new Spec { Texture = "stimulator_zagustin", Map = c => HueShift(c, 275f, 35f, 268f, 1f, 0.6f) } },
             // Surv16: the dark kit to light gray, the red cross stays.
             { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec { Texture = "item_meds_survival_first_aid_rollup_kit_LOD0_diff", Map = c => LightGray(c, 0.38f, 1.4f) } },
@@ -65,7 +65,10 @@ namespace Krane.ItemTweaks
             internal int Generation;
             internal int AsyncFailures;
             internal Task<Color32[]> Mapping;
-            internal Func<Texture2D> NewCopy;
+            // Copy factory of the source the background recolor read (its size matches Mapping's pixels).
+            internal Func<Texture2D> MappingCopy;
+            // Temporary RenderTexture of the background readback, released by its callback or when the recolor is dropped.
+            internal RenderTexture PendingRt;
             internal readonly List<Action<Texture2D>> Waiters = new List<Action<Texture2D>>();
         }
 
@@ -108,12 +111,12 @@ namespace Krane.ItemTweaks
         {
             if (task.Status != TaskStatus.RanToCompletion || ReferenceEquals(task.Result, null)) return;
             var go = task.Result;
-            // Hot path (every in-hands model of every player): items without a spec only need a restore when the pooled model carries ours.
+            // Hot path (every in-hands model of every player): items without a spec only need a restore (a no-op without our marker).
             if (!Specs.ContainsKey(template) && Plugin.IsMainThread)
             {
                 try
                 {
-                    if (go != null && go.GetComponent<PropertyBlockMarker>() != null) PropertyBlockMarker.Restore(go);
+                    if (go != null) PropertyBlockMarker.Restore(go);
                 }
                 catch (Exception e)
                 {
@@ -176,7 +179,7 @@ namespace Krane.ItemTweaks
             var key = (source.name, template);
             if (!Recolors.TryGetValue(key, out var recolor))
             {
-                recolor = new Recolor { NewCopy = CopyFactory(source) };
+                recolor = new Recolor();
                 Recolors[key] = recolor;
             }
             if (recolor.Result != null)
@@ -221,16 +224,19 @@ namespace Krane.ItemTweaks
             try
             {
                 Color32[] ready = null;
+                var readyCopy = recolor.MappingCopy;
                 if (recolor.Pending && recolor.Mapping != null)
                 {
                     try { ready = recolor.Mapping.Result; }
                     catch { ready = null; }
                 }
-                // Supersede the background recolor: its callbacks see another generation and stop.
+                // Supersede the background recolor: its callbacks see another generation and stop (its readback callback still
+                // releases its RenderTexture).
                 recolor.Pending = false;
                 recolor.Mapping = null;
+                recolor.MappingCopy = null;
                 recolor.Generation++;
-                Finish(recolor, ready != null ? Upload(recolor, ready) : ReadNow(source, spec, recolor));
+                Finish(recolor, ready != null && readyCopy != null ? Upload(readyCopy, ready) : ReadNow(source, spec));
             }
             catch (Exception e)
             {
@@ -272,7 +278,7 @@ namespace Krane.ItemTweaks
             }
         }
 
-        private static Texture2D ReadNow(Texture source, Spec spec, Recolor recolor)
+        private static Texture2D ReadNow(Texture source, Spec spec)
         {
             var rt = BlitToTemporary(source);
             var previous = RenderTexture.active;
@@ -280,7 +286,7 @@ namespace Krane.ItemTweaks
             try
             {
                 RenderTexture.active = rt;
-                copy = recolor.NewCopy();
+                copy = CopyFactory(source)();
                 copy.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
                 RenderTexture.active = previous;
                 var pixels = copy.GetPixels32();
@@ -301,9 +307,9 @@ namespace Krane.ItemTweaks
             }
         }
 
-        private static Texture2D Upload(Recolor recolor, Color32[] pixels)
+        private static Texture2D Upload(Func<Texture2D> newCopy, Color32[] pixels)
         {
-            var copy = recolor.NewCopy();
+            var copy = newCopy();
             try
             {
                 copy.SetPixels32(pixels);
@@ -334,10 +340,13 @@ namespace Krane.ItemTweaks
         {
             var generation = ++recolor.Generation;
             var name = source.name;
+            var newCopy = CopyFactory(source);
             var rt = BlitToTemporary(source);
             recolor.Pending = true;
             recolor.StartedAt = Time.realtimeSinceStartup;
             recolor.Mapping = null;
+            recolor.MappingCopy = null;
+            recolor.PendingRt = rt;
             try
             {
                 AsyncGPUReadback.Request(rt, 0, Format, request =>
@@ -349,7 +358,12 @@ namespace Krane.ItemTweaks
                     }
                     finally
                     {
-                        RenderTexture.ReleaseTemporary(rt);
+                        // Not if DropAsync already released it (timeout).
+                        if (ReferenceEquals(recolor.PendingRt, rt))
+                        {
+                            recolor.PendingRt = null;
+                            RenderTexture.ReleaseTemporary(rt);
+                        }
                     }
                     if (recolor.Generation != generation || !recolor.Pending) return;
                     if (pixels == null)
@@ -357,6 +371,7 @@ namespace Krane.ItemTweaks
                         DropAsync(recolor, new InvalidOperationException("GPU readback of " + name + " failed"));
                         return;
                     }
+                    recolor.MappingCopy = newCopy;
                     recolor.Mapping = Task.Run(() =>
                     {
                         MapAll(pixels, spec);
@@ -374,7 +389,8 @@ namespace Krane.ItemTweaks
                         {
                             recolor.Pending = false;
                             recolor.Mapping = null;
-                            Finish(recolor, Upload(recolor, t.Result));
+                            recolor.MappingCopy = null;
+                            Finish(recolor, Upload(newCopy, t.Result));
                         }
                         catch (Exception e)
                         {
@@ -385,6 +401,7 @@ namespace Krane.ItemTweaks
             }
             catch
             {
+                recolor.PendingRt = null;
                 RenderTexture.ReleaseTemporary(rt);
                 throw;
             }
@@ -396,8 +413,14 @@ namespace Krane.ItemTweaks
         {
             recolor.Pending = false;
             recolor.Mapping = null;
+            recolor.MappingCopy = null;
             recolor.Generation++;
             recolor.AsyncFailures++;
+            if (recolor.PendingRt != null)
+            {
+                RenderTexture.ReleaseTemporary(recolor.PendingRt);
+                recolor.PendingRt = null;
+            }
             Plugin.Log.LogWarning(e);
             Notify(recolor, null);
         }
