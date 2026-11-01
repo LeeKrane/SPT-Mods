@@ -55,6 +55,13 @@ internal sealed record CloneDef(
     bool AddToSecureContainers = false,
     string? RequiredType = null);
 
+/// <summary>Extra trader offers of an existing item (not a clone). SourceMod adds the item; its absence skips the offers.</summary>
+internal sealed record ItemOfferDef(string Name, string ItemTpl, string? SourceMod, OfferDef[] Offers)
+{
+    /// <summary>The item as a "clone" of itself, so the clone offer code can add it. Only FixedPrice or Barter offers: there is no source to price from.</summary>
+    public CloneDef AsCloneDef => new(Name, Name, ItemTpl, ItemTpl, "", SourceMod, null, ShareMastery: false, ReplicateFilters: false, Offers, IsVariant: false);
+}
+
 /// <summary>Fixed ids and the clone list. Item and preset ids must match the JSON under db/.</summary>
 internal static class Ids
 {
@@ -116,6 +123,8 @@ internal static class Ids
     public const string Surv16 = "6190dcad54cbff2ac9b7b8f4";
     public const string Mule = "5ed51652f6c34d2cc26336a1";
     public const string Keta = "4f3445dcc79d0c4d911c6144";
+
+    public const string ModSpearUpperBlack = "6892180ee9f15149b0677260";
 }
 
 internal static class Clones
@@ -224,5 +233,17 @@ internal static class Clones
         [
             new(Ids.Therapist, 4, ["8ddee9eda2fec1723cdb5fd0"], 1, FixedPrice: 578434),
         ], IsVariant: false, RequiredType: "Aishi.ModMetadata"),
+    ];
+}
+
+internal static class ItemOffers
+{
+    public static readonly ItemOfferDef[] All =
+    [
+        // Same price and limit as Aishi's own offer (LL4, 51 USD, 1 per restock).
+        new("Modified MCX-SPEAR 6.8x51 upper receiver (Black)", Ids.ModSpearUpperBlack, "ISB-Aishi",
+        [
+            new(Ids.NatoQuartermaster, 1, ["0dc14be2b961e488099a0b60"], 1, FixedPrice: 51, Optional: true, Currency: Ids.Usd),
+        ]),
     ];
 }

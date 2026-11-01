@@ -12,7 +12,8 @@ using SPTarkov.Server.Core.Utils.Json;
 namespace ItemTweaks4Server;
 
 /// <summary>
-/// Quests, bots (database and Progressive Bot System pools), slot filters and trader offers of every created clone. TypePriority sits after
+/// Quests, bots (database and Progressive Bot System pools), slot filters and trader offers of every created clone, plus the
+/// extra trader offers of existing items (<see cref="ItemOffers"/>). TypePriority sits after
 /// NATO Quartermaster (TraderRegistration + 2), which builds its assort in its own OnLoad, and before TraderCallbacks,
 /// RagfairCallbacks and PresetCallbacks so flea trader offers and presets pick everything up.
 /// </summary>
@@ -53,6 +54,18 @@ public sealed class ItemIntegrations(
             if (def.AddToSecureContainers) Guard($"{def.Name} secure containers", () => AddToSecureContainers(def));
             foreach (var offer in def.Offers)
                 Guard($"{def.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
+        }
+
+        foreach (var extra in ItemOffers.All)
+        {
+            if (!templateTable.Items.ContainsKey(new MongoId(extra.ItemTpl)))
+            {
+                logger.LogInformation("[ItemTweaks4Server] {Mod} item {Name} ({Tpl}) not found, its offers skipped", extra.SourceMod, extra.Name, extra.ItemTpl);
+                continue;
+            }
+            var def = extra.AsCloneDef;
+            foreach (var offer in extra.Offers)
+                Guard($"{extra.Name} {offer.TraderName} offer", () => AddOffer(def, offer));
         }
         return Task.CompletedTask;
     }
