@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>krane.AdsCameraDistance</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Comfort.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/ItemComponent.Types.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.InputLegacyModule.dll" Private="false" />
+  </ItemGroup>
+</Project>
