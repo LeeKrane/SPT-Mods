@@ -1,0 +1,39 @@
+{
+  "3d8e6f5ae7ea46f17f0fa1a5": {
+    "itemTplToClone": "5c0e530286f7747fa1419862",
+    "parentId": "5448f3a64bdc2d60728b456a",
+    "handbookParentId": "5b47574386f77428ca22b33a",
+    "overrideProperties": {
+      "medUseTime": 2,
+      "StimulatorBuffs": "KraneBuffsPropitalII",
+      "effects_damage": {
+        "Contusion": {
+          "delay": 0,
+          "duration": 900,
+          "fadeOut": 0
+        },
+        "Pain": {
+          "delay": 0,
+          "duration": 900,
+          "fadeOut": 5
+        }
+      }
+    },
+    "locales": {
+      "en": {
+        "name": "Propital II regenerative stimulant injector",
+        "shortName": "Propital II",
+        "description": "An improved, long-acting Propital formula. Stimulates regeneration for 15 minutes and relieves pain and concussion. Has side effects."
+      }
+    },
+    "fleaPriceRoubles": 79456,
+    "handbookPriceRoubles": 42120,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

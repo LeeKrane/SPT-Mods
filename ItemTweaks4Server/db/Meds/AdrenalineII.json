@@ -1,0 +1,39 @@
+{
+  "746f40f23c943aa94650ab0b": {
+    "itemTplToClone": "5c10c8fd86f7743d7d706df3",
+    "parentId": "5448f3a64bdc2d60728b456a",
+    "handbookParentId": "5b47574386f77428ca22b33a",
+    "overrideProperties": {
+      "medUseTime": 2,
+      "StimulatorBuffs": "KraneBuffsAdrenalineII",
+      "effects_damage": {
+        "Contusion": {
+          "delay": 0,
+          "duration": 120,
+          "fadeOut": 0
+        },
+        "Pain": {
+          "delay": 0,
+          "duration": 120,
+          "fadeOut": 5
+        }
+      }
+    },
+    "locales": {
+      "en": {
+        "name": "Adrenaline II injector",
+        "shortName": "Adrenaline II",
+        "description": "A refined adrenaline dose with strong short-term regeneration. Relieves pain and concussion and boosts endurance and strength."
+      }
+    },
+    "fleaPriceRoubles": 39812,
+    "handbookPriceRoubles": 62920,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

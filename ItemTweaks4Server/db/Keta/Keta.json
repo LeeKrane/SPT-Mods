@@ -1,0 +1,36 @@
+{
+  "4f3445dcc79d0c4d911c6144": {
+    "itemTplToClone": "5ed51652f6c34d2cc26336a1",
+    "parentId": "5448f3a64bdc2d60728b456a",
+    "handbookParentId": "5b47574386f77428ca22b33a",
+    "overrideProperties": {
+      "medUseTime": 2,
+      "ExaminedByDefault": false,
+      "StimulatorBuffs": "KraneBuffsKeta",
+      "Prefab": {
+        "path": "equipment/anomalous_items/item_stimulator_anomalous_loot.bundle",
+        "rcid": ""
+      },
+      "UsePrefab": {
+        "path": "equipment/anomalous_items/item_stimulator_anomalous_container.bundle",
+        "rcid": ""
+      }
+    },
+    "locales": {
+      "en": {
+        "name": "K.E.T.A.",
+        "shortName": "K.E.T.A.",
+        "description": "<align=\"center\"><color=#E35D5D><b>ANOMALOUS ITEM — K.E.T.A.</b></color>\n<size=90%>TerraGroup research • Unknown properties.</size></align>"
+      }
+    },
+    "fleaPriceRoubles": 578434,
+    "handbookPriceRoubles": 143000,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

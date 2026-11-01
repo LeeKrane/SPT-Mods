@@ -1,0 +1,27 @@
+{
+  "6190dcad54cbff2ac9b7b8f4": {
+    "itemTplToClone": "5d02797c86f774203f38e30a",
+    "parentId": "5448f3ac4bdc2dce718b4569",
+    "handbookParentId": "5b47574386f77428ca22b339",
+    "overrideProperties": {
+      "medUseTime": 10,
+      "MaxHpResource": 15
+    },
+    "locales": {
+      "en": {
+        "name": "Surv16 field surgical kit",
+        "shortName": "Surv16",
+        "description": "An improved surgical kit with more supplies and quicker-to-use tools, allowing treating serious injuries right on the battlefield."
+      }
+    },
+    "fleaPriceRoubles": 132140,
+    "handbookPriceRoubles": 144000,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

@@ -13,6 +13,7 @@
 // Icons are rendered from that same model (ItemIconCreator.RenderModel -> CreateCleanLootPrefabAsync ->
 // CreateItemAsync) and cached by template id, so they come out tinted too. Pooled models are cleaned again
 // when they are reused for another template.
+// The recolored med clones (MedRecolor.cs) hook into the same postfix.
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -102,6 +103,8 @@ namespace Krane.ItemTweaks
             catch (Exception e) { Log.LogError(e); }
             try { Ps321Scope.Init(h); }
             catch (Exception e) { Log.LogError(e); }
+            try { MedRecolor.Init(h); }
+            catch (Exception e) { Log.LogError(e); }
             Log.LogInfo("ItemTweaks loaded");
         }
 
@@ -166,7 +169,7 @@ namespace Krane.ItemTweaks
             }
         }
 
-        private static Task RunOnMainThread(Action action)
+        internal static Task RunOnMainThread(Action action)
         {
             if (Thread.CurrentThread.ManagedThreadId == _mainThread)
             {
@@ -187,10 +190,10 @@ namespace Krane.ItemTweaks
         {
             if (item == null || __result == null) return;
             Cases.TryGetValue(item.TemplateId, out var spec);
-            __result = Wrap(__result, spec);
+            __result = Wrap(__result, spec, item.TemplateId);
         }
 
-        private static async Task<GameObject> Wrap(Task<GameObject> task, CaseSpec spec)
+        private static async Task<GameObject> Wrap(Task<GameObject> task, CaseSpec spec, MongoID template)
         {
             GameObject go = await task;
             if (go == null) return go;
@@ -201,6 +204,7 @@ namespace Krane.ItemTweaks
                     // Always start from the untinted state: a pooled model may carry the other case's tint.
                     Untint(go);
                     if (spec != null) Tint(go, spec.Color(), spec.Flat(), spec.Multiply);
+                    MedRecolor.Apply(go, template);
                 });
             }
             catch (Exception e)

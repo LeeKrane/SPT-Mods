@@ -12,7 +12,7 @@ namespace ItemTweaks4Server;
 /// Creates every clone in <see cref="Clones.All"/> (item, default preset, handbook and flea price) through WTT-ServerCommonLib
 /// (db/**.json), then fixes slot parents and shares the source's weapon mastery.
 /// Runs just after WTT-Armory (Preload + 2), before anything caches items or presets. A clone whose source item does not
-/// exist (optional mod missing) is skipped with a log line; the others still load.
+/// exist (optional mod missing) or whose RequiredType is not loaded is skipped with a log line; the others still load.
 /// </summary>
 [Injectable(TypePriority = OnLoadOrder.Preload + 10)]
 public sealed class ItemCreation(
@@ -23,6 +23,16 @@ public sealed class ItemCreation(
 {
     public async Task OnLoadAsync(CancellationToken cancellationToken)
     {
+        // Stimulator buffs first: the items reference them by name.
+        try
+        {
+            await wttCommon.CustomBuffService.CreateCustomBuffs(Assembly.GetExecutingAssembly(), "db/CustomBuffs");
+        }
+        catch (Exception e)
+        {
+            logger.LogError("[ItemTweaks4Server] Buff creation failed: {Error}", e);
+        }
+
         // WTT loads a directory recursively. Clones with an optional source have a directory of their own, so a missing
         // source skips just that directory instead of raising a WTT error.
         foreach (var group in Clones.All.GroupBy(d => d.ConfigDir))
@@ -39,6 +49,10 @@ public sealed class ItemCreation(
                         logger.LogError("[ItemTweaks4Server] Source item {Source} ({Tpl}) not found, {Name} skipped", def.SourceName, def.SourceTpl, def.Name);
                 }
                 if (missing.Count > 0) continue;
+                var absent = defs.Where(d => d.RequiredType != null && !IsTypeLoaded(d.RequiredType)).ToList();
+                foreach (var def in absent)
+                    logger.LogInformation("[ItemTweaks4Server] {Mod} not installed, skipping {Name}", def.SourceMod, def.Name);
+                if (absent.Count > 0) continue;
 
                 await wttCommon.CustomItemServiceExtended.CreateCustomItems(Assembly.GetExecutingAssembly(), group.Key);
                 foreach (var def in defs) Finish(def);
@@ -49,6 +63,9 @@ public sealed class ItemCreation(
             }
         }
     }
+
+    private static bool IsTypeLoaded(string typeName) =>
+        AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetType(typeName) != null);
 
     private void Finish(CloneDef def)
     {

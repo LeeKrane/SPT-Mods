@@ -47,8 +47,8 @@ public sealed class ItemIntegrations(
                 Guard($"{def.Name} quests", () => AddToQuests(def));
                 Guard($"{def.Name} bots", () => AddToBots(def));
                 Guard($"{def.Name} Progressive Bot System", () => AddToApbs(def));
-                if (def.ReplicateFilters) Guard($"{def.Name} slot filters", () => AddToFilters(def));
             }
+            if (def.ReplicateFilters) Guard($"{def.Name} slot filters", () => AddToFilters(def));
             if (def.AddToSpecialSlots) Guard($"{def.Name} special slots", () => AddToSpecialSlots(def));
             if (def.AddToSecureContainers) Guard($"{def.Name} secure containers", () => AddToSecureContainers(def));
             foreach (var offer in def.Offers)

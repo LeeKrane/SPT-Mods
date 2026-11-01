@@ -29,7 +29,7 @@ internal sealed record OfferDef(
 /// <summary>A clone of an existing item. Ids must match the item JSON in ConfigDir.</summary>
 /// <param name="ConfigDir">Directory (relative to the mod folder) with the WTT item JSON. WTT loads a directory recursively and one bad item must not
 /// block the others, so an optional source gets a directory of its own, loaded only when the source exists.</param>
-/// <param name="SourceMod">Mod that adds the source item, null for vanilla. Its absence skips the clone.</param>
+/// <param name="SourceMod">Mod that adds the source item (or that RequiredType belongs to), null for vanilla. Its absence skips the clone.</param>
 /// <param name="PresetId">Default preset of a weapon clone, null for an item sold on its own.</param>
 /// <param name="ShareMastery">Add the clone to every weapon mastery entry holding the source.</param>
 /// <param name="ReplicateFilters">Add the clone to every slot, cartridge and grid filter holding the source.</param>
@@ -37,6 +37,8 @@ internal sealed record OfferDef(
 /// that merely reuses the source's model.</param>
 /// <param name="AddToSpecialSlots">Add the clone to the filter of every slot named SpecialSlot*.</param>
 /// <param name="AddToSecureContainers">Add the clone to the grid filter of every secured container whose filter lists the key tool.</param>
+/// <param name="RequiredType">Full name of a type of SourceMod. The clone needs that mod (e.g. its bundles) although the source is vanilla: skipped
+/// when no loaded assembly has the type.</param>
 internal sealed record CloneDef(
     string Name,
     string SourceName,
@@ -50,7 +52,8 @@ internal sealed record CloneDef(
     OfferDef[] Offers,
     bool IsVariant = true,
     bool AddToSpecialSlots = false,
-    bool AddToSecureContainers = false);
+    bool AddToSecureContainers = false,
+    string? RequiredType = null);
 
 /// <summary>Fixed ids and the clone list. Item and preset ids must match the JSON under db/.</summary>
 internal static class Ids
@@ -67,6 +70,7 @@ internal static class Ids
     public const string Jaeger = "5c0647fdd443bc2504c2d371";
     public const string Mechanic = "5a7c2eca46aef81a7ca2145d";
     public const string NatoQuartermaster = "bb371fed0e82b224f2d82c0d";
+    public const string Therapist = "54cb57776803fa99248b456e";
 
     public static readonly IReadOnlyDictionary<string, string> TraderNames = new Dictionary<string, string>
     {
@@ -74,6 +78,7 @@ internal static class Ids
         [Prapor] = "Prapor",
         [Jaeger] = "Jaeger",
         [Mechanic] = "Mechanic",
+        [Therapist] = "Therapist",
         [NatoQuartermaster] = "NATO Quartermaster",
     };
 
@@ -100,6 +105,17 @@ internal static class Ids
     public const string Ps320 = "5c0517910db83400232ffee5";
     public const string Ps321 = "41a2f314a21e64a4862d6bd1";
     public const string TarkovskayaVodka = "5d40407c86f774318526545a";
+
+    public const string Propital = "5c0e530286f7747fa1419862";
+    public const string PropitalII = "3d8e6f5ae7ea46f17f0fa1a5";
+    public const string Adrenaline = "5c10c8fd86f7743d7d706df3";
+    public const string AdrenalineII = "746f40f23c943aa94650ab0b";
+    public const string Zagustin = "5c0e533786f7747fa23f4d47";
+    public const string ZagustinII = "3f5582d3b2ae5f2af6083599";
+    public const string Surv12 = "5d02797c86f774203f38e30a";
+    public const string Surv16 = "6190dcad54cbff2ac9b7b8f4";
+    public const string Mule = "5ed51652f6c34d2cc26336a1";
+    public const string Keta = "4f3445dcc79d0c4d911c6144";
 }
 
 internal static class Clones
@@ -186,5 +202,27 @@ internal static class Clones
         [
             new(Ids.NatoQuartermaster, 1, ["1dc853e420eb2b1fbe1d0e5d"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
         ], IsVariant: false, AddToSpecialSlots: true, AddToSecureContainers: true),
+        // Improved meds: fit wherever the source fits, but join none of its quests or bot pools. Therapist LL4 at 2x the source flea price.
+        new("Propital II", "Propital", Ids.Propital, Ids.PropitalII, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            new(Ids.Therapist, 4, ["bf51445db5f2de0327519663"], 3, FixedPrice: 79456),
+        ], IsVariant: false),
+        new("Adrenaline II", "Adrenaline", Ids.Adrenaline, Ids.AdrenalineII, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            new(Ids.Therapist, 4, ["3b2b0117138b12bb04d0c6ac"], 3, FixedPrice: 39812),
+        ], IsVariant: false),
+        new("Zagustin II", "Zagustin", Ids.Zagustin, Ids.ZagustinII, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            new(Ids.Therapist, 4, ["25bf892de7b0aa2d41571fe3"], 3, FixedPrice: 92504),
+        ], IsVariant: false),
+        new("Surv16", "Surv12", Ids.Surv12, Ids.Surv16, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            new(Ids.Therapist, 4, ["5354074733ed474a48c13c8a"], 2, FixedPrice: 132140),
+        ], IsVariant: false),
+        // New anomalous stim with the ISB-Aishi KTE stim model (its bundle): a M.U.L.E. clone, created only with ISB-Aishi. 2x the SJ6 + M.U.L.E. flea prices.
+        new("K.E.T.A.", "M.U.L.E.", Ids.Mule, Ids.Keta, "db/Keta", "ISB-Aishi", null, ShareMastery: false, ReplicateFilters: false,
+        [
+            new(Ids.Therapist, 4, ["8ddee9eda2fec1723cdb5fd0"], 1, FixedPrice: 578434),
+        ], IsVariant: false, RequiredType: "Aishi.ModMetadata"),
     ];
 }
