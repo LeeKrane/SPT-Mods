@@ -6,5 +6,6 @@
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Comfort.dll" Private="false" />
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Unity.TextMeshPro.dll" Private="false" />
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(SptDir)/BepInEx/plugins/spt/spt-common.dll" Private="false" />
   </ItemGroup>
 </Project>

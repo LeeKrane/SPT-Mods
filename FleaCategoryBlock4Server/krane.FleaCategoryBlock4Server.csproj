@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>krane.FleaCategoryBlock4Server</AssemblyName>
+    <RootNamespace>FleaCategoryBlock4Server</RootNamespace>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)../ServerMod.props" />
+</Project>

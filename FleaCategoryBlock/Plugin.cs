@@ -1,24 +1,18 @@
-// Disable buying player flea offers per handbook subcategory.
+// Disable buying player flea offers per handbook subcategory. Thin client for the server mod
+// FleaCategoryBlock4Server, which does the filtering.
 //
 // One bool config entry per non-root handbook category, created once both the handbook (RagFair.UpdateSettings)
-// and the full locale (LocalizationManager.UpdateLocales) are loaded. Section = top-level
-// category, key = path below it. A disabled category also covers every category and item below it.
-// Harmony patches using the resulting set:
-//   EftClientBackendSession.GetOffers (prefix + postfix)   keeps flea pages full. A selection that is in or
-//     contains a disabled category (also all offers, linked or needed search) asks for page 0 with MaxOffers
-//     offers instead, drops disabled player offers and hands the game the requested page cut from the rest,
-//     with the total count set to what is left, so paging stays right. Owner filter and tree counts are
-//     left to the server.
-//   RagFair.ProceedWithOffers (prefix)        drops disabled player offers from every page before it is
-//     cached or shown (catches anything the request patch did not cover). Trader and own offers stay, and
-//     the browse tree is untouched (its counts come from the server and still include the dropped offers).
-//   RagfairScreen.OfferPurchaseHandler (prefix)   refuses to open the purchase window for a disabled player
-//     offer (money or barter, single or mass buy) and shows a warning.
-// Changing a setting clears the offer cache.
+// and the full locale (LocalizationManager.UpdateLocales) are loaded. Section = top-level category, key = path
+// below it. The ids of the enabled entries are posted to /krane/fleacategoryblock/set once per login
+// (after the settings exist) and on every change; the server saves them per profile. The server drops other
+// players' offers in and below those categories from this session's searches before paging; trader offers,
+// own offers and the category tree counts are untouched. After a change the cached offer pages are dropped
+// once the server has the new list.
+// Fallback: RagfairScreen.OfferPurchaseHandler (prefix) refuses to buy a disabled player offer that is still on
+// screen (shown before a change, or the server mod is missing) and shows a warning.
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -28,6 +22,7 @@ using EFT.Communications;
 using EFT.HandBook;
 using EFT.UI.Ragfair;
 using HarmonyLib;
+using SPT.Common.Http;
 
 namespace Krane.FleaCategoryBlock
 {
@@ -37,20 +32,17 @@ namespace Krane.FleaCategoryBlock
         internal static ManualLogSource Log;
         internal static Plugin Instance;
 
+        private const string Route = "/krane/fleacategoryblock/set";
+
         private static readonly Dictionary<string, ConfigEntry<bool>> Entries = new Dictionary<string, ConfigEntry<bool>>();
         private static readonly HashSet<string> Disabled = new HashSet<string>();
         private static RagFair _ragfair;
         private static string _profileId;
-        internal static ConfigEntry<int> MaxOffers;
 
         private void Awake()
         {
             Log = Logger;
             Instance = this;
-            MaxOffers = Config.Bind("General", "Max offers per request", 1000, new ConfigDescription(
-                "Offers fetched at once when a selection contains a disabled category; pages are cut from them.",
-                new AcceptableValueRange<int>(100, 5000)));
-            MaxOffers.SettingChanged += (_, __) => _ragfair?.ClearCachedInfo();
             new Harmony("krane.fleacategoryblock").PatchAll(typeof(Patches));
         }
 
@@ -62,17 +54,18 @@ namespace Krane.FleaCategoryBlock
 
         // Needs the handbook and the full locale (category names). The handbook loads during profile load,
         // the full locale only afterwards (DataPrepareOperation.Run), so this is tried from both hooks.
-        internal static void TryBuildConfig()
+        // Returns true when the settings were created by this call.
+        internal static bool TryBuildConfig()
         {
             if (Entries.Count > 0 || !Singleton<Handbook>.Instantiated)
             {
-                return;
+                return false;
             }
             Handbook handbook = Singleton<Handbook>.Instance;
             Dictionary<string, HandbookData> categories = handbook.Categories.Where(c => c?.Id != null).GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.First());
             if (!categories.Values.Any(c => !string.IsNullOrEmpty(c.ParentId) && Name(c) != c.Id))
             {
-                return;
+                return false;
             }
 
             HashSet<string> usedKeys = new HashSet<string>();
@@ -107,35 +100,48 @@ namespace Krane.FleaCategoryBlock
 
                 ConfigEntry<bool> entry = Instance.Config.Bind(section, unique, false);
                 Entries[category.Id] = entry;
-                entry.SettingChanged += (_, __) => Refresh();
+                entry.SettingChanged += (_, __) => Send(true);
             }
             Instance.Config.Save();
             Instance.Config.SaveOnConfigSet = saveOnSet;
-            Refresh();
             Log.LogInfo("Created " + Entries.Count + " category settings");
+            return true;
         }
 
-        private static void Refresh()
+        // Posts the enabled category ids (an empty list clears the server side). On a change the cached offer
+        // pages are dropped once the server has the new list, so the next load is filtered by it.
+        internal static async void Send(bool changed)
         {
-            Disabled.Clear();
-            foreach (KeyValuePair<string, ConfigEntry<bool>> pair in Entries)
+            if (Entries.Count == 0)
             {
-                if (pair.Value.Value)
+                return;
+            }
+            Disabled.Clear();
+            Disabled.UnionWith(Entries.Where(p => p.Value.Value).Select(p => p.Key));
+            string json = "{\"categories\":[" + string.Join(",", Disabled.Select(id => "\"" + id + "\"")) + "]}";
+            try
+            {
+                await RequestHandler.PostJsonAsync(Route, json);
+                if (changed)
                 {
-                    Disabled.Add(pair.Key);
+                    _ragfair?.ClearCachedInfo();
                 }
             }
-            _ragfair?.ClearCachedInfo();
+            catch (Exception e)
+            {
+                Log.LogWarning("Sending disabled categories failed (is FleaCategoryBlock4Server installed?): " + e.Message);
+            }
         }
 
-        // Handbook id (category or item template) -> disabled category id at or above it, or null.
-        internal static string DisabledCategory(string id)
+        // Disabled category id at or above the offer's item, for other players' offers only; null otherwise.
+        internal static string DisabledCategory(Offer offer)
         {
-            if (Disabled.Count == 0 || id == null)
+            if (Disabled.Count == 0 || offer?.Item == null || offer.User == null || (offer.MemberType & EMemberCategory.Trader) != 0
+                || (_profileId != null && offer.User.Id.ToString() == _profileId))
             {
                 return null;
             }
-            for (HandbookNode node = Singleton<Handbook>.Instance?[id]; node != null; node = node.Parent)
+            for (HandbookNode node = Singleton<Handbook>.Instance?[offer.Item.StringTemplateId]; node != null; node = node.Parent)
             {
                 if (node.Data != null && Disabled.Contains(node.Data.Id))
                 {
@@ -143,41 +149,6 @@ namespace Krane.FleaCategoryBlock
                 }
             }
             return null;
-        }
-
-        // True when the selection is in or contains a disabled category: fetch MaxOffers and page on the client.
-        internal static bool PageOnClient(string handbookId)
-        {
-            if (Disabled.Count == 0)
-            {
-                return false;
-            }
-            if (string.IsNullOrEmpty(handbookId) || DisabledCategory(handbookId) != null)
-            {
-                return true;
-            }
-            Handbook handbook = Singleton<Handbook>.Instance;
-            foreach (string id in Disabled)
-            {
-                for (HandbookNode node = handbook?[id]; node != null; node = node.Parent)
-                {
-                    if (node.Data?.Id == handbookId)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        internal static string DisabledCategory(Offer offer)
-        {
-            if (offer?.Item == null || offer.User == null || (offer.MemberType & EMemberCategory.Trader) != 0
-                || (_profileId != null && offer.User.Id.ToString() == _profileId))
-            {
-                return null;
-            }
-            return DisabledCategory(offer.Item.StringTemplateId);
         }
 
         internal static string DisplayName(string categoryId)
@@ -204,99 +175,28 @@ namespace Krane.FleaCategoryBlock
 
     internal static class Patches
     {
+        // Runs at every login: creates the settings once the names are loaded, then sends the list once.
         [HarmonyPatch(typeof(RagFair), nameof(RagFair.UpdateSettings))]
         [HarmonyPostfix]
         private static void UpdateSettingsPostfix(RagFair __instance, Profile profile)
         {
             Plugin.SetRagfair(__instance, profile);
-            TryBuildConfig();
+            Run(() => Plugin.TryBuildConfig());
+            Run(() => Plugin.Send(false));
         }
 
+        // The full locale usually arrives after UpdateSettings; the first login's send happens here then.
         [HarmonyPatch(typeof(LocalizationManager), nameof(LocalizationManager.UpdateLocales))]
         [HarmonyPostfix]
         private static void UpdateLocalesPostfix()
         {
-            TryBuildConfig();
-        }
-
-        private static void TryBuildConfig()
-        {
-            try
+            Run(() =>
             {
-                Plugin.TryBuildConfig();
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogError("Building category settings failed: " + e);
-            }
-        }
-
-        internal class Paging
-        {
-            public int Page;
-            public int Limit;
-        }
-
-        [HarmonyPatch(typeof(EftClientBackendSession), nameof(EftClientBackendSession.GetOffers))]
-        [HarmonyPrefix]
-        private static void GetOffersPrefix(ref int page, ref int limit, int offerOwnerType, string handbookId,
-            Dictionary<string, int> buildItems, out Paging __state)
-        {
-            __state = null;
-            if (offerOwnerType == (int)EOfferOwnerType.TraderOwnerType || (buildItems != null && buildItems.Count > 0) || limit <= 0
-                || !Plugin.PageOnClient(handbookId))
-            {
-                return;
-            }
-            __state = new Paging { Page = page, Limit = limit };
-            page = 0;
-            limit = Math.Max(Plugin.MaxOffers.Value, limit);
-        }
-
-        [HarmonyPatch(typeof(EftClientBackendSession), nameof(EftClientBackendSession.GetOffers))]
-        [HarmonyPostfix]
-        private static void GetOffersPostfix(ref Task<Result<OffersList>> __result, Paging __state)
-        {
-            if (__state != null && __result != null)
-            {
-                __result = CutPage(__result, __state);
-            }
-        }
-
-        private static async Task<Result<OffersList>> CutPage(Task<Result<OffersList>> request, Paging paging)
-        {
-            Result<OffersList> result = await request;
-            OffersList list = result.Failed ? null : result.Value;
-            if (list?.offers == null)
-            {
-                return result;
-            }
-            try
-            {
-                Offer[] kept = list.offers.Where(o => Plugin.DisabledCategory(o) == null).ToArray();
-                if (list.offersCount > list.offers.Length)
+                if (Plugin.TryBuildConfig())
                 {
-                    Plugin.Log.LogWarning("Server has " + list.offersCount + " offers, only " + list.offers.Length
-                        + " fetched (Max offers per request); the rest is not shown");
+                    Plugin.Send(true);
                 }
-                list.offersCount = kept.Length;
-                list.offers = kept.Skip(paging.Page * paging.Limit).Take(paging.Limit).ToArray();
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogError("Cutting offer page failed: " + e);
-            }
-            return result;
-        }
-
-        [HarmonyPatch(typeof(RagFair), nameof(RagFair.ProceedWithOffers))]
-        [HarmonyPrefix]
-        private static void ProceedWithOffersPrefix(OffersList result)
-        {
-            if (result?.offers != null)
-            {
-                result.offers = result.offers.Where(o => Plugin.DisabledCategory(o) == null).ToArray();
-            }
+            });
         }
 
         [HarmonyPatch(typeof(RagfairScreen), nameof(RagfairScreen.OfferPurchaseHandler))]
@@ -317,6 +217,18 @@ namespace Krane.FleaCategoryBlock
                 }
             }
             return true;
+        }
+
+        private static void Run(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError("FleaCategoryBlock failed: " + e);
+            }
         }
     }
 }
