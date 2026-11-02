@@ -2,4 +2,8 @@
   <PropertyGroup>
     <AssemblyName>krane.BtrInteriorVolume</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Comfort.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.AudioModule.dll" Private="false" />
+  </ItemGroup>
 </Project>

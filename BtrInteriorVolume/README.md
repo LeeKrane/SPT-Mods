@@ -3,7 +3,7 @@
 **Requires:** SPT 4.1.6. Compatible with Fika 2.4.6 (not required). No other dependencies. Client-only.
 
 ## What
-Adds a volume slider for the BTR as heard while you sit inside it. Scales the interior engine and movement loops, engine start and acceleration sounds, turret rotation and suspension impacts. Outside the BTR, and for other players, nothing changes. The slider applies at once, also mid-ride.
+Adds a volume slider for the BTR as heard while you sit inside it. Scales the interior engine and movement loops, engine start and acceleration sounds, turret rotation and suspension impacts. The slider is active only while your own player boards, sits in or leaves the BTR. Outside it, sound stays vanilla, also when a Fika teammate boards. Changes apply at once, also mid-ride.
 
 Not scaled: driver voice, departure horn, doors and radio.
 
