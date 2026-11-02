@@ -80,6 +80,10 @@ namespace Krane.AdsCameraDistance
         // local space, captured on the last aiming frame for LensFovPatch. The target is derived from the sight
         // on the weapon, so in weapon space it does not move with weapon bob, and the lens can be read later in
         // the frame (or a frame later) without the two drifting apart. See LensFovPatch.LensRatio.
+        // Whether the sight last aimed through has a stored offset. Updated on aiming frames only and kept after
+        // un-aiming, so LensFovPatch's raised optic resolution does not flip back and forth around every
+        // scope-in (each flip recreates the optic render texture, which stutters).
+        internal static bool SightHasOffset;
         internal static UnityEngine.Transform EyeSpace;
         internal static UnityEngine.Vector3 EyeLocal;
         internal static UnityEngine.Vector3 EyeAxisLocal;
@@ -150,6 +154,7 @@ namespace Krane.AdsCameraDistance
                         string key = KeyFor(__instance);
                         if (key != null)
                             offset = OffsetFor(key);
+                        SightHasOffset = offset != 0f;
                     }
                     if (offset != 0f)
                     {
