@@ -4,11 +4,11 @@
 // and the full locale (LocalizationManager.UpdateLocales) are loaded. Section = top-level
 // category, key = path below it. A disabled category also covers every category and item below it.
 // Harmony patches using the resulting set:
-//   EftClientBackendSession.GetOffers (prefix + postfix)   keeps flea pages full. A selection at or under a
-//     disabled category asks the server for trader offers only. A selection containing a disabled category
-//     (a parent, all offers, linked or needed search) asks for page 0 with MaxOffers offers instead, drops
-//     disabled player offers and hands the game the requested page cut from the rest, with the total
-//     count reduced by the dropped offers, so paging stays right.
+//   EftClientBackendSession.GetOffers (prefix + postfix)   keeps flea pages full. A selection that is in or
+//     contains a disabled category (also all offers, linked or needed search) asks for page 0 with MaxOffers
+//     offers instead, drops disabled player offers and hands the game the requested page cut from the rest,
+//     with the total count set to what is left, so paging stays right. Owner filter and tree counts are
+//     left to the server.
 //   RagFair.ProceedWithOffers (prefix)        drops disabled player offers from every page before it is
 //     cached or shown (catches anything the request patch did not cover). Trader and own offers stay, and
 //     the browse tree is untouched (its counts come from the server and still include the dropped offers).
@@ -50,6 +50,7 @@ namespace Krane.FleaCategoryBlock
             MaxOffers = Config.Bind("General", "Max offers per request", 1000, new ConfigDescription(
                 "Offers fetched at once when a selection contains a disabled category; pages are cut from them.",
                 new AcceptableValueRange<int>(100, 5000)));
+            MaxOffers.SettingChanged += (_, __) => _ragfair?.ClearCachedInfo();
             new Harmony("krane.fleacategoryblock").PatchAll(typeof(Patches));
         }
 
@@ -144,20 +145,16 @@ namespace Krane.FleaCategoryBlock
             return null;
         }
 
-        // 0: request unchanged, 1: trader offers only, 2: fetch MaxOffers and page on the client.
-        internal static int RequestMode(string handbookId)
+        // True when the selection is in or contains a disabled category: fetch MaxOffers and page on the client.
+        internal static bool PageOnClient(string handbookId)
         {
             if (Disabled.Count == 0)
             {
-                return 0;
+                return false;
             }
-            if (string.IsNullOrEmpty(handbookId))
+            if (string.IsNullOrEmpty(handbookId) || DisabledCategory(handbookId) != null)
             {
-                return 2;
-            }
-            if (DisabledCategory(handbookId) != null)
-            {
-                return 1;
+                return true;
             }
             Handbook handbook = Singleton<Handbook>.Instance;
             foreach (string id in Disabled)
@@ -166,11 +163,11 @@ namespace Krane.FleaCategoryBlock
                 {
                     if (node.Data?.Id == handbookId)
                     {
-                        return 2;
+                        return true;
                     }
                 }
             }
-            return 0;
+            return false;
         }
 
         internal static string DisabledCategory(Offer offer)
@@ -242,25 +239,18 @@ namespace Krane.FleaCategoryBlock
 
         [HarmonyPatch(typeof(EftClientBackendSession), nameof(EftClientBackendSession.GetOffers))]
         [HarmonyPrefix]
-        private static void GetOffersPrefix(ref int page, ref int limit, ref int offerOwnerType, string handbookId,
+        private static void GetOffersPrefix(ref int page, ref int limit, int offerOwnerType, string handbookId,
             Dictionary<string, int> buildItems, out Paging __state)
         {
             __state = null;
-            if (offerOwnerType == (int)EOfferOwnerType.TraderOwnerType || (buildItems != null && buildItems.Count > 0) || limit <= 0)
+            if (offerOwnerType == (int)EOfferOwnerType.TraderOwnerType || (buildItems != null && buildItems.Count > 0) || limit <= 0
+                || !Plugin.PageOnClient(handbookId))
             {
                 return;
             }
-            switch (Plugin.RequestMode(handbookId))
-            {
-                case 1:
-                    offerOwnerType = (int)EOfferOwnerType.TraderOwnerType;
-                    break;
-                case 2:
-                    __state = new Paging { Page = page, Limit = limit };
-                    page = 0;
-                    limit = Math.Max(Plugin.MaxOffers.Value, limit);
-                    break;
-            }
+            __state = new Paging { Page = page, Limit = limit };
+            page = 0;
+            limit = Math.Max(Plugin.MaxOffers.Value, limit);
         }
 
         [HarmonyPatch(typeof(EftClientBackendSession), nameof(EftClientBackendSession.GetOffers))]
@@ -287,9 +277,9 @@ namespace Krane.FleaCategoryBlock
                 if (list.offersCount > list.offers.Length)
                 {
                     Plugin.Log.LogWarning("Server has " + list.offersCount + " offers, only " + list.offers.Length
-                        + " fetched (Max offers per request); later pages can be short");
+                        + " fetched (Max offers per request); the rest is not shown");
                 }
-                list.offersCount = Math.Max(kept.Length, list.offersCount - (list.offers.Length - kept.Length));
+                list.offersCount = kept.Length;
                 list.offers = kept.Skip(paging.Page * paging.Limit).Take(paging.Limit).ToArray();
             }
             catch (Exception e)
