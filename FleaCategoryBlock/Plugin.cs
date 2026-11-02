@@ -1,7 +1,7 @@
 // Disable buying player flea offers per handbook subcategory.
 //
-// One bool config entry per non-root handbook category, created from the handbook the first time the flea
-// market settings load (RagFair.UpdateSettings, right after the handbook is built). Section = top-level
+// One bool config entry per non-root handbook category, created once both the handbook (RagFair.UpdateSettings)
+// and the full locale (LocalizationManager.UpdateLocales) are loaded. Section = top-level
 // category, key = path below it. A disabled category also covers every category and item below it.
 // Two Harmony patches use the resulting set:
 //   RagFair.ProceedWithOffers (prefix)        drops player offers of disabled categories from every server
@@ -44,17 +44,27 @@ namespace Krane.FleaCategoryBlock
             new Harmony("krane.fleacategoryblock").PatchAll(typeof(Patches));
         }
 
-        internal static void BuildConfig(RagFair ragfair, Profile profile)
+        internal static void SetRagfair(RagFair ragfair, Profile profile)
         {
             _ragfair = ragfair;
             _profileId = profile?.Id;
+        }
+
+        // Needs the handbook and the full locale (category names). The handbook loads during profile load,
+        // the full locale only afterwards (DataPrepareOperation.Run), so this is tried from both hooks.
+        internal static void TryBuildConfig()
+        {
+            if (Entries.Count > 0 || !Singleton<Handbook>.Instantiated)
+            {
+                return;
+            }
             Handbook handbook = Singleton<Handbook>.Instance;
-            if (handbook == null || Entries.Count > 0)
+            Dictionary<string, HandbookData> categories = handbook.Categories.Where(c => c?.Id != null).GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.First());
+            if (!categories.Values.Any(c => !string.IsNullOrEmpty(c.ParentId) && Name(c) != c.Id))
             {
                 return;
             }
 
-            Dictionary<string, HandbookData> categories = handbook.Categories.Where(c => c?.Id != null).GroupBy(c => c.Id).ToDictionary(g => g.Key, g => g.First());
             HashSet<string> usedKeys = new HashSet<string>();
             bool saveOnSet = Instance.Config.SaveOnConfigSet;
             Instance.Config.SaveOnConfigSet = false;
@@ -164,9 +174,22 @@ namespace Krane.FleaCategoryBlock
         [HarmonyPostfix]
         private static void UpdateSettingsPostfix(RagFair __instance, Profile profile)
         {
+            Plugin.SetRagfair(__instance, profile);
+            TryBuildConfig();
+        }
+
+        [HarmonyPatch(typeof(LocalizationManager), nameof(LocalizationManager.UpdateLocales))]
+        [HarmonyPostfix]
+        private static void UpdateLocalesPostfix()
+        {
+            TryBuildConfig();
+        }
+
+        private static void TryBuildConfig()
+        {
             try
             {
-                Plugin.BuildConfig(__instance, profile);
+                Plugin.TryBuildConfig();
             }
             catch (Exception e)
             {

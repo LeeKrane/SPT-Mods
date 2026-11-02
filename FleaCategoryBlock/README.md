@@ -14,7 +14,7 @@ Disabling a subcategory also covers every subcategory and item below it.
 Self-imposed flea restrictions (for example no player-bought ammo or meds) without changing the server for everyone.
 
 ## How
-- Settings are created from the handbook the first time the flea market settings load after login (postfix on `RagFair.UpdateSettings`). They appear in the config file and Configuration Manager after the first launch into the main menu.
+- Settings are created once after login, when both the handbook (postfix on `RagFair.UpdateSettings`) and the full locale with category names (postfix on `LocalizationManager.UpdateLocales`) are loaded. They appear in the config file and Configuration Manager after the first launch into the main menu.
 - Prefix on `RagFair.ProceedWithOffers` removes disabled player offers from each server page before it is cached or shown. The server still pages offers, so a page can show fewer offers than the page size.
 - Prefix on `RagfairScreen.OfferPurchaseHandler` refuses the purchase window.
 
