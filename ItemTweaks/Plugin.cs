@@ -32,6 +32,7 @@ using UnityEngine;
 
 namespace Krane.ItemTweaks
 {
+    [BepInDependency("com.fika.core", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin("krane.itemtweaks", "Krane's Item Tweaks & Additions", "1.0.0")]
     public class Plugin : BaseUnityPlugin
     {
@@ -116,22 +117,25 @@ namespace Krane.ItemTweaks
             catch (Exception e) { Log.LogError(e); }
             try { KetaMystery.Init(h); }
             catch (Exception e) { Log.LogError(e); }
+            try { MedSpeed.Init(h); }
+            catch (Exception e) { Log.LogError(e); }
             Log.LogInfo("ItemTweaks loaded");
         }
 
         // One failing patch target must not stop the other features.
-        internal static void SafePatch(Harmony harmony, Type owner, MethodBase target, string prefix = null, string postfix = null, int? priority = null)
+        internal static void SafePatch(Harmony harmony, Type owner, MethodBase target, string prefix = null, string postfix = null, int? priority = null, string finalizer = null)
         {
             try
             {
-                if (target == null) throw new MissingMethodException("patch target not found for " + (prefix ?? postfix));
+                if (target == null) throw new MissingMethodException("patch target not found for " + (prefix ?? postfix ?? finalizer));
                 HarmonyMethod Make(string name)
                 {
                     var m = new HarmonyMethod(owner, name);
                     if (priority.HasValue) m.priority = priority.Value;
                     return m;
                 }
-                harmony.Patch(target, prefix: prefix == null ? null : Make(prefix), postfix: postfix == null ? null : Make(postfix));
+                harmony.Patch(target, prefix: prefix == null ? null : Make(prefix), postfix: postfix == null ? null : Make(postfix),
+                    finalizer: finalizer == null ? null : Make(finalizer));
             }
             catch (Exception e)
             {
