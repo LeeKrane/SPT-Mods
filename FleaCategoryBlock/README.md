@@ -15,7 +15,10 @@ Self-imposed flea restrictions (for example no player-bought ammo or meds) witho
 
 ## How
 - Settings are created once after login, when both the handbook (postfix on `RagFair.UpdateSettings`) and the full locale with category names (postfix on `LocalizationManager.UpdateLocales`) are loaded. They appear in the config file and Configuration Manager after the first launch into the main menu.
-- Prefix on `RagFair.ProceedWithOffers` removes disabled player offers from each server page before it is cached or shown. The server still pages offers, so a page can show fewer offers than the page size.
+- Pages stay full (prefix and postfix on `EftClientBackendSession.GetOffers`):
+  - A category or item at or under a disabled category is requested as trader offers only. The server pages it normally.
+  - A selection that contains a disabled category (a parent category, all offers, linked or needed search) is requested as one block of up to `Max offers per request` offers. Disabled player offers are dropped and the requested page is cut from the rest, with the total count reduced to match. Every page change fetches the block again. Sorting is done by the server over the whole block, so it stays correct.
+- Prefix on `RagFair.ProceedWithOffers` removes disabled player offers from every page before it is cached or shown, as a safety net.
 - Prefix on `RagfairScreen.OfferPurchaseHandler` refuses the purchase window.
 
 Changing a setting clears the offer cache. Offers already on screen stay until the list reloads (change category or reopen the flea).
@@ -25,4 +28,5 @@ Generated at runtime: one section per top-level handbook category, one entry per
 
 | Section / Key | Default | Effect |
 |---|---|---|
+| General / Max offers per request | `1000` | Offers fetched at once when a selection contains a disabled category (100 to 5000). If the server has more, later pages can be short and a warning is logged. |
 | `<top-level category>` / `<subcategory path>` | `false` | Block buying player flea offers in this subcategory and everything below it. |

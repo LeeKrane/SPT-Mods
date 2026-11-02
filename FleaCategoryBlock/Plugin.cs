@@ -3,17 +3,22 @@
 // One bool config entry per non-root handbook category, created once both the handbook (RagFair.UpdateSettings)
 // and the full locale (LocalizationManager.UpdateLocales) are loaded. Section = top-level
 // category, key = path below it. A disabled category also covers every category and item below it.
-// Two Harmony patches use the resulting set:
-//   RagFair.ProceedWithOffers (prefix)        drops player offers of disabled categories from every server
-//     offer page before it is cached or shown. Trader and own offers stay, and the browse tree is untouched
-//     (its counts come from the server and still include the dropped offers). Pages can show fewer offers
-//     than the page size.
+// Harmony patches using the resulting set:
+//   EftClientBackendSession.GetOffers (prefix + postfix)   keeps flea pages full. A selection at or under a
+//     disabled category asks the server for trader offers only. A selection containing a disabled category
+//     (a parent, all offers, linked or needed search) asks for page 0 with MaxOffers offers instead, drops
+//     disabled player offers and hands the game the requested page cut from the rest, with the total
+//     count reduced by the dropped offers, so paging stays right.
+//   RagFair.ProceedWithOffers (prefix)        drops disabled player offers from every page before it is
+//     cached or shown (catches anything the request patch did not cover). Trader and own offers stay, and
+//     the browse tree is untouched (its counts come from the server and still include the dropped offers).
 //   RagfairScreen.OfferPurchaseHandler (prefix)   refuses to open the purchase window for a disabled player
 //     offer (money or barter, single or mass buy) and shows a warning.
 // Changing a setting clears the offer cache.
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -36,11 +41,15 @@ namespace Krane.FleaCategoryBlock
         private static readonly HashSet<string> Disabled = new HashSet<string>();
         private static RagFair _ragfair;
         private static string _profileId;
+        internal static ConfigEntry<int> MaxOffers;
 
         private void Awake()
         {
             Log = Logger;
             Instance = this;
+            MaxOffers = Config.Bind("General", "Max offers per request", 1000, new ConfigDescription(
+                "Offers fetched at once when a selection contains a disabled category; pages are cut from them.",
+                new AcceptableValueRange<int>(100, 5000)));
             new Harmony("krane.fleacategoryblock").PatchAll(typeof(Patches));
         }
 
@@ -135,6 +144,35 @@ namespace Krane.FleaCategoryBlock
             return null;
         }
 
+        // 0: request unchanged, 1: trader offers only, 2: fetch MaxOffers and page on the client.
+        internal static int RequestMode(string handbookId)
+        {
+            if (Disabled.Count == 0)
+            {
+                return 0;
+            }
+            if (string.IsNullOrEmpty(handbookId))
+            {
+                return 2;
+            }
+            if (DisabledCategory(handbookId) != null)
+            {
+                return 1;
+            }
+            Handbook handbook = Singleton<Handbook>.Instance;
+            foreach (string id in Disabled)
+            {
+                for (HandbookNode node = handbook?[id]; node != null; node = node.Parent)
+                {
+                    if (node.Data?.Id == handbookId)
+                    {
+                        return 2;
+                    }
+                }
+            }
+            return 0;
+        }
+
         internal static string DisabledCategory(Offer offer)
         {
             if (offer?.Item == null || offer.User == null || (offer.MemberType & EMemberCategory.Trader) != 0
@@ -194,6 +232,71 @@ namespace Krane.FleaCategoryBlock
             {
                 Plugin.Log.LogError("Building category settings failed: " + e);
             }
+        }
+
+        internal class Paging
+        {
+            public int Page;
+            public int Limit;
+        }
+
+        [HarmonyPatch(typeof(EftClientBackendSession), nameof(EftClientBackendSession.GetOffers))]
+        [HarmonyPrefix]
+        private static void GetOffersPrefix(ref int page, ref int limit, ref int offerOwnerType, string handbookId,
+            Dictionary<string, int> buildItems, out Paging __state)
+        {
+            __state = null;
+            if (offerOwnerType == (int)EOfferOwnerType.TraderOwnerType || (buildItems != null && buildItems.Count > 0) || limit <= 0)
+            {
+                return;
+            }
+            switch (Plugin.RequestMode(handbookId))
+            {
+                case 1:
+                    offerOwnerType = (int)EOfferOwnerType.TraderOwnerType;
+                    break;
+                case 2:
+                    __state = new Paging { Page = page, Limit = limit };
+                    page = 0;
+                    limit = Math.Max(Plugin.MaxOffers.Value, limit);
+                    break;
+            }
+        }
+
+        [HarmonyPatch(typeof(EftClientBackendSession), nameof(EftClientBackendSession.GetOffers))]
+        [HarmonyPostfix]
+        private static void GetOffersPostfix(ref Task<Result<OffersList>> __result, Paging __state)
+        {
+            if (__state != null && __result != null)
+            {
+                __result = CutPage(__result, __state);
+            }
+        }
+
+        private static async Task<Result<OffersList>> CutPage(Task<Result<OffersList>> request, Paging paging)
+        {
+            Result<OffersList> result = await request;
+            OffersList list = result.Failed ? null : result.Value;
+            if (list?.offers == null)
+            {
+                return result;
+            }
+            try
+            {
+                Offer[] kept = list.offers.Where(o => Plugin.DisabledCategory(o) == null).ToArray();
+                if (list.offersCount > list.offers.Length)
+                {
+                    Plugin.Log.LogWarning("Server has " + list.offersCount + " offers, only " + list.offers.Length
+                        + " fetched (Max offers per request); later pages can be short");
+                }
+                list.offersCount = Math.Max(kept.Length, list.offersCount - (list.offers.Length - kept.Length));
+                list.offers = kept.Skip(paging.Page * paging.Limit).Take(paging.Limit).ToArray();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError("Cutting offer page failed: " + e);
+            }
+            return result;
         }
 
         [HarmonyPatch(typeof(RagFair), nameof(RagFair.ProceedWithOffers))]
