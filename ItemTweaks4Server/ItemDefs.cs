@@ -94,6 +94,11 @@ internal static class Ids
     public const string Aek973 = "686093d590c3dce07984c38a";
     public const string ModAek973 = "6ab089a2446b86a2c9cc48be";
     public const string ModAek973Preset = "6ad47e1cea3cb9cfe08ba9d3";
+    public const string Msr = "684e32eaec9f5eb3cacc7ca7";
+    public const string MsrX = "99ce2a2593ed0ae82737cec7";
+    public const string MsrXPreset = "954c85dbf6349292db05abea";
+    public const string Sabre5 = "684e49af525c602815316f8d";
+    public const string Sabre5X = "b62a92a241bba6be2d500f80";
 
     public const string Aek971 = "0cb4a36dd2e587b46e813dbe";
     public const string ModAek971 = "6aa84f678601f2f04729f7c7";
@@ -194,6 +199,9 @@ internal static class Clones
             new(Ids.Mechanic, 4, Aek971Mechanic, 1, FixedPrice: 378000),
             new(Ids.NatoQuartermaster, 1, Aek971Nato, 1, FixedPrice: 378000, Optional: true),
         ]),
+        // Flea only, at 2x the source flea price.
+        new("MSR-X", "MSR", Ids.Msr, Ids.MsrX, "db/MsrX", Armory, Ids.MsrXPreset, ShareMastery: true, ReplicateFilters: false, []),
+        new("Sabre-5X", "Sabre-5", Ids.Sabre5, Ids.Sabre5X, "db/MsrX", Armory, null, ShareMastery: false, ReplicateFilters: true, []),
         new("MOD-X-47", "X-47", Ids.X47, Ids.ModX47, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
         [
             // Mechanic LL4: 2x its own X-47 price. NATO: 2x its own offer, else 2x Mechanic's price plus 25%.

@@ -1,0 +1,127 @@
+{
+  "99ce2a2593ed0ae82737cec7": {
+    "itemTplToClone": "684e32eaec9f5eb3cacc7ca7",
+    "parentId": "5447b6254bdc2dc3278b4568",
+    "handbookParentId": "5b5f798886f77447ed5636b5",
+    "overrideProperties": {
+      "Ergonomics": 59,
+      "RecoilForceUp": 307,
+      "RecoilForceBack": 820,
+      "CanSellOnRagfair": true
+    },
+    "locales": {
+      "en": {
+        "name": "Modified Remington MSR-X .300 WM bolt-action sniper rifle",
+        "shortName": "MSR-X",
+        "description": "The Modular Sniper Rifle, or MSR, is a bolt-action sniper rifle developed and produced by Remington Arms for the United States Army. It was introduced in 2009, and was designed to meet specific United States Army and USSOCOM Precision Sniper Rifle requirements. The MSR initially won the PSR competition, and was called the Remington Mk 21 Precision Sniper Rifle in U.S. military service. However, it was then decided that the Mk 21 did not conform to SOCOM requirements at the time in 2018, and the program was re-competed with the Barrett MRAD selected in 2019 as the Mk 22 Advanced Sniper Rifle solution."
+      }
+    },
+    "fleaPriceRoubles": 197000,
+    "handbookPriceRoubles": 73258,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": true,
+    "weaponPresets": [
+      {
+        "_changeWeaponName": false,
+        "_encyclopedia": "99ce2a2593ed0ae82737cec7",
+        "_id": "954c85dbf6349292db05abea",
+        "_items": [
+          {
+            "_id": "ec8a82cd977b2ce6b01f6807",
+            "_tpl": "99ce2a2593ed0ae82737cec7",
+            "upd": {
+              "Repairable": {
+                "MaxDurability": 100,
+                "Durability": 100
+              },
+              "FireMode": {
+                "FireMode": "single"
+              }
+            }
+          },
+          {
+            "_id": "ef9774263e208410a0e818de",
+            "_tpl": "684e4c6792bdb7cd32ad3fb1",
+            "parentId": "ec8a82cd977b2ce6b01f6807",
+            "slotId": "mod_pistol_grip"
+          },
+          {
+            "_id": "6ecdb1053d3d9c2ffe89dd95",
+            "_tpl": "684e3e64b3bb65a5ffdfd7ea",
+            "parentId": "ec8a82cd977b2ce6b01f6807",
+            "slotId": "mod_magazine"
+          },
+          {
+            "_id": "9cde3a9c09b9c62737179338",
+            "_tpl": "684e427881b3bec74bf97c28",
+            "parentId": "ec8a82cd977b2ce6b01f6807",
+            "slotId": "mod_stock"
+          },
+          {
+            "_id": "f9a4535b4e1b8952f9e16a5c",
+            "_tpl": "684e466f7b0ffe0ac7770bd7",
+            "parentId": "ec8a82cd977b2ce6b01f6807",
+            "slotId": "mod_barrel"
+          },
+          {
+            "_id": "2b488554d494c3e1d4d894fd",
+            "_tpl": "5c0102b20db834001d23eebc",
+            "parentId": "ec8a82cd977b2ce6b01f6807",
+            "slotId": "mod_tactical_000"
+          },
+          {
+            "_id": "37171efd49a126094f338ff9",
+            "_tpl": "5c0102aa0db834001b734ba1",
+            "parentId": "ec8a82cd977b2ce6b01f6807",
+            "slotId": "mod_tactical_001"
+          },
+          {
+            "_id": "4f07ee204a02283aa5f9c41e",
+            "_tpl": "5c0102aa0db834001b734ba1",
+            "parentId": "ec8a82cd977b2ce6b01f6807",
+            "slotId": "mod_tactical_002"
+          },
+          {
+            "_id": "e8acef16f29f234d9e01102f",
+            "_tpl": "684e48393dabb9b1547f82f5",
+            "parentId": "f9a4535b4e1b8952f9e16a5c",
+            "slotId": "mod_muzzle"
+          }
+        ],
+        "_name": "MsrX_default",
+        "_parent": "ec8a82cd977b2ce6b01f6807",
+        "_type": "Preset"
+      }
+    ]
+  },
+  "b62a92a241bba6be2d500f80": {
+    "itemTplToClone": "684e49af525c602815316f8d",
+    "parentId": "550aa4cd4bdc2dd8348b456c",
+    "handbookParentId": "5b5f731a86f774093e6cb4f9",
+    "overrideProperties": {
+      "Accuracy": -1,
+      "Recoil": -20,
+      "Ergonomics": -5,
+      "CanSellOnRagfair": true
+    },
+    "locales": {
+      "en": {
+        "name": "OmniTech Systems Sabre-5X .300 WM sound suppressor",
+        "shortName": "Sabre-5X",
+        "description": "A proprietary suppressor designed specifically for .300 Winchest Magnum cartridges that fits onto the Remington MSR single port muzzle device."
+      }
+    },
+    "fleaPriceRoubles": 179486,
+    "handbookPriceRoubles": 77486,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false
+  }
+}
