@@ -89,14 +89,13 @@ namespace Krane.FleaCategoryBlock
 
                 string section = Clean(Name(root));
                 string key = Clean(string.Join(" / ", path));
-                if (!usedKeys.Add(section + "\n" + key))
+                string unique = key;
+                for (int n = 2; !usedKeys.Add(section + "\n" + unique); n++)
                 {
-                    key += " (" + category.Id + ")";
-                    usedKeys.Add(section + "\n" + key);
+                    unique = key + " (" + n + ")";
                 }
 
-                ConfigEntry<bool> entry = Instance.Config.Bind(section, key, false,
-                    "Block buying player flea offers in this category and all categories below it. Handbook id " + category.Id + ".");
+                ConfigEntry<bool> entry = Instance.Config.Bind(section, unique, false);
                 Entries[category.Id] = entry;
                 entry.SettingChanged += (_, __) => Refresh();
             }
