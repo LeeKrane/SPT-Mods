@@ -1,4 +1,4 @@
-# Item Tweaks & Additions (ItemTweaks)
+# Krane's Item Tweaks & Additions (ItemTweaks)
 
 **Requires:** SPT 4.1.6, Fika 2.4.6. Soft dependency on the server mod ItemTweaks4Server (adds the case items, the Redline dossier, the PS-321 scope and the med clones); without it only the repair-in-raid feature does anything. Install on every client and on the headless client.
 

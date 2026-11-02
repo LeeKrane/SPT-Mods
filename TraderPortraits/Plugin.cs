@@ -25,7 +25,7 @@ using VisitAPI.Native;
 
 namespace Krane.TraderPortraits
 {
-    [BepInPlugin("krane.traderportraits", "TraderPortraits", "1.0.0")]
+    [BepInPlugin("krane.traderportraits", "Krane's TraderPortraits", "1.0.0")]
     [BepInDependency("com.sora.visitapi", BepInDependency.DependencyFlags.HardDependency)]
     public class Plugin : BaseUnityPlugin
     {

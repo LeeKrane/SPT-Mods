@@ -8,7 +8,7 @@ namespace ItemTweaks4Server;
 public record ModMetadata : IModMetadata
 {
     public string ModGuid { get; init; } = "krane.itemtweaks4server";
-    public string Name { get; init; } = "Item Tweaks & Additions (Server)";
+    public string Name { get; init; } = "Krane's Item Tweaks & Additions (Server)";
     public string Author { get; init; } = "krane";
     public List<string>? Contributors { get; init; }
     public Version Version { get; init; } = new("1.0.0");
