@@ -143,7 +143,8 @@ namespace Krane.FleaCategoryBlock
 
         private static string Name(HandbookData data)
         {
-            string name = string.IsNullOrEmpty(data.Name) ? null : data.Name.Localized();
+            // Raw handbook categories carry no Name; the game localizes them by Id (HandbookData.CloneAs).
+            string name = (string.IsNullOrEmpty(data.Name) ? data.Id : data.Name).Localized();
             return string.IsNullOrEmpty(name) ? data.Id : name;
         }
 
