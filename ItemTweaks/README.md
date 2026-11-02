@@ -1,6 +1,6 @@
 # Krane's Item Tweaks & Additions (ItemTweaks)
 
-**Requires:** SPT 4.1.6, Fika 2.4.6. Soft dependency on the server mod ItemTweaks4Server (adds the case items, the Redline dossier, the PS-321 scope and the med clones); without it only the repair-in-raid feature does anything. Install on every client and on the headless client.
+**Requires:** SPT 4.1.6, Fika 2.4.6. Soft dependency on the server mod ItemTweaks4Server (adds the case items, the Redline dossier, the PS-321 scope, the med clones and the .300 WM CBJ); without it only the repair-in-raid feature does anything. Install on every client and on the headless client.
 
 ## What
 Client side of the server-mod cases:
@@ -11,7 +11,7 @@ Client side of the server-mod cases:
 
 - Valday PS-321 1/5x scope (template `41a2f314a21e64a4862d6bd1`, a PS-320 clone with the same model): while aiming through it, the zoomed mode is 5x instead of 6x, the camera sits 2 cm closer to the eyepiece (the scope picture fills more of the view) and the lens shadow when the eye leaves the axis (sway, movement) is smaller. Hard-coded, no settings. Local view only; other players see a normal PS-320 model.
 
-- Med clones: X-Propital (`3d8e6f5ae7ea46f17f0fa1a5`) light orange instead of yellow, X-Adrenaline (`746f40f23c943aa94650ab0b`) dark orange instead of red, X-Zagustin (`3f5582d3b2ae5f2af6083599`) dark violet instead of purple, Surv16 (`6190dcad54cbff2ac9b7b8f4`) light gray instead of the dark Surv12 kit (red cross kept). Loot, inventory, icon and in-hands models (first and third person); the vanilla items are unaffected. Hard-coded, no settings.
+- Med clones: X-Propital (`3d8e6f5ae7ea46f17f0fa1a5`) light orange instead of yellow, X-Adrenaline (`746f40f23c943aa94650ab0b`) dark orange instead of red, X-Zagustin (`3f5582d3b2ae5f2af6083599`) dark violet instead of purple, Surv16 (`6190dcad54cbff2ac9b7b8f4`) light gray instead of the dark Surv12 kit (red cross kept). .300 Winchester Magnum CBJ (`5efdb8528bd5573c2e4faf1d`): the WTT-Armory FMJ cartridge darker. Loot, inventory, icon and in-hands models (first and third person); the vanilla items are unaffected. Hard-coded, no settings.
 
 - K.E.T.A. (`4f3445dcc79d0c4d911c6144`): its buff stats show as ??????? instead of their values, like ISB-Aishi's KTE stims. Display only. Hard-coded, no settings.
 

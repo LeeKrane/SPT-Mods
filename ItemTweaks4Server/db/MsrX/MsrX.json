@@ -111,13 +111,41 @@
     },
     "locales": {
       "en": {
-        "name": "OmniTech Systems Sabre-5X .300 WM sound suppressor",
-        "shortName": "Sabre-5X",
+        "name": "OmniTech Systems Sabre-5-X .300 WM sound suppressor",
+        "shortName": "Sabre-5-X",
         "description": "A proprietary suppressor designed specifically for .300 Winchest Magnum cartridges that fits onto the Remington MSR single port muzzle device."
       }
     },
     "fleaPriceRoubles": 179486,
     "handbookPriceRoubles": 77486,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false
+  },
+  "5efdb8528bd5573c2e4faf1d": {
+    "itemTplToClone": "684e2ded3b64f7187cf14fae",
+    "parentId": "5485a8684bdc2da71d8b4567",
+    "handbookParentId": "5b47574386f77428ca22b33b",
+    "overrideProperties": {
+      "Damage": 172,
+      "ammoRec": 5,
+      "LightBleedingDelta": 0.25,
+      "HeavyBleedingDelta": 0.2,
+      "PenetrationPower": 59,
+      "InitialSpeed": 902,
+      "CanSellOnRagfair": true
+    },
+    "locales": {
+      "en": {
+        "name": ".300 Winchester Magnum CBJ",
+        "shortName": "CBJ",
+        "description": "A .300 Winchester Magnum (7.62x67B) CBJ cartridge with a 13.9 gram bullet with a copper jacket and a hardened steel penetrator, in a dark-coated brass casing. Hits harder and pierces better than the FMJ, at the cost of more recoil."
+      }
+    },
+    "fleaPriceRoubles": 1402,
+    "handbookPriceRoubles": 824,
     "addtoTraders": false,
     "addtoBots": false,
     "addtoStaticLootContainers": false,

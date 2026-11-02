@@ -1,6 +1,6 @@
-// Client side of the ItemTweaks4Server med clones that reuse a vanilla model with other colors: X-Propital (light orange instead
-// of yellow), X-Adrenaline (dark orange instead of red), X-Zagustin (dark violet instead of purple) and Surv16 (light gray
-// instead of the dark Surv12 roll-up kit).
+// Client side of the ItemTweaks4Server clones that reuse a model with other colors: X-Propital (light orange instead of yellow),
+// X-Adrenaline (dark orange instead of red), X-Zagustin (dark violet instead of purple), Surv16 (light gray instead of the dark
+// Surv12 roll-up kit) and .300 Winchester Magnum CBJ (the WTT-Armory FMJ cartridge, darker).
 //
 // A tint cannot do this (multiplying red never gives orange), so the albedo itself is recolored: the model's _MainTex (bundle
 // textures are not CPU-readable) is blitted to an sRGB RenderTexture, read back as raw sRGB bytes (no color conversion in either path),
@@ -36,7 +36,7 @@ namespace Krane.ItemTweaks
     {
         private sealed class Spec
         {
-            internal string Texture;
+            internal string[] Textures;
             internal Func<Color32, Color32> Map;
         }
 
@@ -44,13 +44,15 @@ namespace Krane.ItemTweaks
         private static readonly Dictionary<MongoID, Spec> Specs = new Dictionary<MongoID, Spec>
         {
             // X-Propital: yellow (about 50 degrees) to light orange.
-            { (MongoID)"3d8e6f5ae7ea46f17f0fa1a5", new Spec { Texture = "stimulator_propital", Map = c => HueShift(c, 50f, 30f, 32f, 0.8f, 1.3f) } },
+            { (MongoID)"3d8e6f5ae7ea46f17f0fa1a5", new Spec { Textures = new[] { "stimulator_propital" }, Map = c => HueShift(c, 50f, 30f, 32f, 0.8f, 1.3f) } },
             // X-Adrenaline: red to dark orange.
-            { (MongoID)"746f40f23c943aa94650ab0b", new Spec { Texture = "stimulator_adrenaline", Map = c => HueShift(c, 0f, 25f, 24f, 1f, 1.15f) } },
+            { (MongoID)"746f40f23c943aa94650ab0b", new Spec { Textures = new[] { "stimulator_adrenaline" }, Map = c => HueShift(c, 0f, 25f, 24f, 1f, 1.15f) } },
             // X-Zagustin: purple (about 275 degrees) to dark violet.
-            { (MongoID)"3f5582d3b2ae5f2af6083599", new Spec { Texture = "stimulator_zagustin", Map = c => HueShift(c, 275f, 35f, 268f, 1f, 0.6f) } },
+            { (MongoID)"3f5582d3b2ae5f2af6083599", new Spec { Textures = new[] { "stimulator_zagustin" }, Map = c => HueShift(c, 275f, 35f, 268f, 1f, 0.6f) } },
             // Surv16: the dark kit to light gray, the red cross stays.
-            { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec { Texture = "item_meds_survival_first_aid_rollup_kit_LOD0_diff", Map = c => LightGray(c, 0.38f, 1.4f) } },
+            { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec { Textures = new[] { "item_meds_survival_first_aid_rollup_kit_LOD0_diff" }, Map = c => LightGray(c, 0.38f, 1.4f) } },
+            // .300 Winchester Magnum CBJ: the WTT-Armory FMJ bullet and casing darkened.
+            { (MongoID)"5efdb8528bd5573c2e4faf1d", new Spec { Textures = new[] { "Bullet.001Diffuse", "Casing.002Diffuse" }, Map = c => Darken(c, 0.45f) } },
         };
 
         // One entry per (texture name, item). Result once made; Failed after a failed synchronous recolor (final). Pending while a
@@ -154,7 +156,7 @@ namespace Krane.ItemTweaks
                     var m = mats[i];
                     if (m == null || !m.HasProperty(Plugin.MainTexId)) continue;
                     var source = m.GetTexture(Plugin.MainTexId);
-                    if (source == null || source.name != spec.Texture) continue;
+                    if (source == null || Array.IndexOf(spec.Textures, source.name) < 0) continue;
                     // The marker doubles as the model's identity: Restore destroys it when the pooled model is handed out again,
                     // so a late copy is only set if this marker is still the model's.
                     if (marker == null) marker = PropertyBlockMarker.For(go);
@@ -453,6 +455,12 @@ namespace Krane.ItemTweaks
             Color32 o = Color.HSVToRGB(nh, Mathf.Clamp01(s * sat), Mathf.Clamp01(v * val));
             o.a = c.a;
             return o;
+        }
+
+        // Value scaled, so the color keeps its hue but gets darker.
+        private static Color32 Darken(Color32 c, float factor)
+        {
+            return new Color32((byte)(c.r * factor), (byte)(c.g * factor), (byte)(c.b * factor), c.a);
         }
 
         // Gray from luminance, lifted to a light gray; strongly colored bright pixels (the red cross) stay.
