@@ -26,13 +26,12 @@ namespace Krane.AdsCameraDistance
         private static int _vanillaResolution;
         private static bool _resolutionStuck;
 
-        // Vanilla sets the size once at start. The raised size is used for sights with a stored offset (see
-        // CameraDistancePatch.SightHasOffset), so the plugin off, compensation off or sights without an offset
-        // cost nothing. SetResolution recreates the render texture, which stutters, so this only switches when
-        // changing between a sight with and one without an offset, never around a scope-in or un-aim.
-        private static void ApplyResolution(bool raised)
+        // Vanilla sets the size once at start. Called every frame by the camera hook, which decides per drawn
+        // weapon (CameraDistancePatch.UpdateResolution); SetResolution runs only on a change.
+        internal static void ApplyResolution(bool raised)
         {
-            OpticCameraManager manager = CameraManager.Instance.OpticCameraManager;
+            CameraManager cameras = CameraManager.Instance;
+            OpticCameraManager manager = cameras != null ? cameras.OpticCameraManager : null;
             if (manager == null || _resolutionStuck)
                 return;
             if (_vanillaResolution == 0)
@@ -58,7 +57,6 @@ namespace Krane.AdsCameraDistance
             try
             {
                 float ratio = Enabled && Plugin.Enabled ? LensRatio(____opticSight) : 1f;
-                ApplyResolution(Enabled && Plugin.Enabled && CameraDistancePatch.SightHasOffset);
                 LensMaterial.Apply(____opticSight, ratio);
                 if (ratio != 1f || _modified)
                 {

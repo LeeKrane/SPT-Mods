@@ -80,13 +80,33 @@ namespace Krane.AdsCameraDistance
         // local space, captured on the last aiming frame for LensFovPatch. The target is derived from the sight
         // on the weapon, so in weapon space it does not move with weapon bob, and the lens can be read later in
         // the frame (or a frame later) without the two drifting apart. See LensFovPatch.LensRatio.
-        // Whether the sight last aimed through has a stored offset. Updated on aiming frames only and kept after
-        // un-aiming, so LensFovPatch's raised optic resolution does not flip back and forth around every
-        // scope-in (each flip recreates the optic render texture, which stutters).
-        internal static bool SightHasOffset;
         internal static UnityEngine.Transform EyeSpace;
         internal static UnityEngine.Vector3 EyeLocal;
         internal static UnityEngine.Vector3 EyeAxisLocal;
+
+        // Raised optic resolution (LensFovPatch.ApplyResolution) is decided per drawn weapon: raised when any of
+        // its sights has a stored offset. SetResolution recreates the optic render texture, which stutters, so
+        // it is decided here, every frame but changing only when the weapon is drawn, when a weapon gets its
+        // first offset, or when the feature turns off; never on a scope-in, a sight switch on the same weapon or
+        // an offset scrolled through 0.
+        private static Weapon _resWeapon;
+        private static int _resVersion = -1;
+        private static bool _raised;
+
+        private static void UpdateResolution(ProceduralWeaponAnimation pwa)
+        {
+            bool allowed = Plugin.Enabled && LensFovPatch.Enabled && !Fault.Blocked && !Plugin.Store.ReadFailed;
+            Weapon weapon = allowed ? _animationData(pwa)?.Weapon : null;
+            if (weapon == null)
+                _raised = false;
+            else if ((object)weapon != _resWeapon)
+                _raised = Plugin.Store.AnyWithPrefix(weapon.StringTemplateId + "|");
+            else if (!_raised && _resVersion != Plugin.Store.Version)
+                _raised = Plugin.Store.AnyWithPrefix(weapon.StringTemplateId + "|");
+            _resWeapon = weapon;
+            _resVersion = Plugin.Store.Version;
+            LensFovPatch.ApplyResolution(_raised);
+        }
 
         // Cached key for the current (weapon, sight, sub-sight); rebuilt only when one of them changes.
         private static Weapon _cWeapon;
@@ -123,6 +143,8 @@ namespace Krane.AdsCameraDistance
             _cSub = -1;
             _cAim = -1;
             _cVersion = -1;
+            _resWeapon = null;
+            _resVersion = -1;
         }
 
         // Same condition as the aiming branch of CalculateCameraPosition, plus first person and not mounted.
@@ -154,7 +176,6 @@ namespace Krane.AdsCameraDistance
                         string key = KeyFor(__instance);
                         if (key != null)
                             offset = OffsetFor(key);
-                        SightHasOffset = offset != 0f;
                     }
                     if (offset != 0f)
                     {
@@ -167,6 +188,14 @@ namespace Krane.AdsCameraDistance
                 {
                     Fault.Hit(e);
                 }
+            }
+            try
+            {
+                UpdateResolution(__instance);
+            }
+            catch (Exception e)
+            {
+                Fault.Hit(e);
             }
             // Same easing as LerpCamera's z (CameraSmoothTime * dt per frame), snapped once it is negligible.
             Shift = UnityEngine.Mathf.Lerp(Shift, target, UnityEngine.Mathf.Clamp01(__instance.CameraSmoothTime * UnityEngine.Time.deltaTime));

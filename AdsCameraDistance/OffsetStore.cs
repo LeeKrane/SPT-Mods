@@ -16,6 +16,17 @@ namespace Krane.AdsCameraDistance
         public bool Dirty { get; private set; }
         public int Count => _map.Count;
 
+        // Whether any stored key starts with prefix (e.g. "<weaponTpl>|": any sight of that weapon has an offset).
+        public bool AnyWithPrefix(string prefix)
+        {
+            foreach (string key in _map.Keys)
+            {
+                if (key.StartsWith(prefix, StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
+        }
+
         public float Get(string key)
         {
             return _map.TryGetValue(key, out float value) ? value : 0f;
