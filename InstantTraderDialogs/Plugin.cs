@@ -20,9 +20,9 @@ using HarmonyLib;
 using UnityEngine;
 using VisitAPI.Native;
 
-namespace Krane.TraderPortraits
+namespace Krane.InstantTraderDialogs
 {
-    [BepInPlugin("krane.traderportraits", "Krane's TraderPortraits", "1.0.0")]
+    [BepInPlugin("krane.instanttraderdialogs", "Krane's InstantTraderDialogs", "1.0.0")]
     [BepInDependency("com.sora.visitapi", BepInDependency.DependencyFlags.HardDependency)]
     public class Plugin : BaseUnityPlugin
     {
@@ -40,7 +40,7 @@ namespace Krane.TraderPortraits
                 new ConfigDescription("Volume of trader voice lines in trader dialogs (3D room and skipped-room mode)",
                     new AcceptableValueRange<float>(0f, 1f)));
             Volume.SettingChanged += (_, __) => VoiceSources.Apply();
-            new Harmony("krane.traderportraits").PatchAll(typeof(Plugin).Assembly);
+            new Harmony("krane.instanttraderdialogs").PatchAll(typeof(Plugin).Assembly);
         }
     }
 

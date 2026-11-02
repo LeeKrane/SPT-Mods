@@ -1,4 +1,4 @@
-# TraderPortraits
+# InstantTraderDialogs
 
 **Requires:** SPT 4.1.6, Fika 2.4.6 compatible. Hard dependency: VisitAPI 1.3.7 (`com.sora.visitapi`). Built for the WTT content backport storyline traders whose VisitAPI rooms it replaces; the 3D rooms keep working when the toggle is off.
 
