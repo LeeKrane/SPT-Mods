@@ -35,8 +35,8 @@ namespace Krane.InstantTraderDialogs
         {
             Log = Logger;
             Instance = this;
-            Skip = Config.Bind("General", "SkipTraderRooms", false, "Skip 3D trader rooms and open the dialog directly");
-            Volume = Config.Bind("General", "TraderVoiceVolume", 1f,
+            Skip = Config.Bind("General", "SkipTraderRooms", true, "Skip 3D trader rooms and open the dialog directly");
+            Volume = Config.Bind("General", "TraderVoiceVolume", 0.25f,
                 new ConfigDescription("Volume of trader voice lines in trader dialogs (3D room and skipped-room mode)",
                     new AcceptableValueRange<float>(0f, 1f)));
             Volume.SettingChanged += (_, __) => VoiceSources.Apply();
