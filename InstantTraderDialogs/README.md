@@ -24,4 +24,4 @@ Needs ffmpeg with libvorbis (or `--format wav`). Without the clips, dialogs show
 | Section / key | Default | Effect |
 |---|---|---|
 | General / SkipTraderRooms | true | Skip 3D trader rooms and open the dialog directly. Read on each click. |
-| General / TraderVoiceVolume | 0.25 (0 to 1) | Volume of trader voice lines in trader dialogs (room and direct mode). Music is not affected. |
+| General / TraderVoiceVolume | 0.4 (0 to 1) | Volume of trader voice lines in trader dialogs (room and direct mode). Music is not affected. |
