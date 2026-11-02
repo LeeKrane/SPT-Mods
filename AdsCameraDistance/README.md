@@ -12,7 +12,7 @@
 - A label such as `Eye dist -0.035` (or `Eye dist vanilla` after a reset) is shown on the optic HUD panel on each adjustment.
 - The main camera FOV never changes. Applies only to your own weapon while aiming in first person: not while blind-firing, mounted, on stationary weapons or for bots and other players. The camera glides to the new distance with the game's own smoothing.
 
-- For magnified optics the scope image is a fixed square texture. A closer eye makes the lens cover more of the screen than that texture, which would leave black edges. The plugin widens the optic camera's field of view by the same ratio, so the lens is filled again, and enlarges the lens image (tuned in-game), so the target stays about the same size as vanilla while the lens and reticle get larger. The same pixels then cover a larger area, so the scope image texture is raised to 2048 by default to keep it sharp.
+- For magnified optics the scope image is a fixed square texture. A closer eye makes the lens cover more of the screen than that texture, which would leave black edges. The plugin widens the optic camera's field of view by the same ratio, so the lens is filled again, and enlarges the lens image (tuned in-game), so the target stays about the same size as vanilla while the lens and reticle get larger. The same pixels then cover a larger area, so the scope image texture is raised to 1536 by default to keep it sharp.
 
 ## Why
 
@@ -36,7 +36,7 @@ The offset is in metres: **negative = closer to the sight**, positive = farther.
 | Adjust / Max | 0 | Farthest offset in metres |
 | Adjust / Invert direction | false | Flip the sign if negative moves the camera away from the sight |
 | Adjust / Compensate lens FOV | true | Widen the optic camera's view by the ratio the lens grew on screen, so the scope has no black edges. Target stays vanilla size, lens and reticle get larger. Off: closer eye shows black lens edges |
-| Adjust / Optic resolution | 2048 | Scope image texture size while the drawn weapon has an offset on any of its sights (vanilla 1024 otherwise). Higher keeps the widened scope image sharp; costs GPU time while scoped. The size switches when a weapon is drawn (or gets its first offset), never on a scope-in, since switching recreates the texture and hitches |
+| Adjust / Optic resolution | 1536 | Scope image texture size while the drawn weapon has an offset on any of its sights (vanilla 1024 otherwise). Higher keeps the widened scope image sharp; costs GPU time while scoped. The size switches when a weapon is drawn (or gets its first offset), never on a scope-in, since switching recreates the texture and hitches |
 | Adjust / Reticle growth | 0 | How much the reticle grows with the lens: 0 = vanilla on-screen size, 1 = with the lens. Below 1 the reticle texture is redrawn shrunk and centred while the lens is scaled. Only shrinks: with the eye farther than vanilla the reticle stays original |
 | Adjust / Reticle edge fill | Extend | Margin around a shrunk reticle. Extend: lines reaching the texture edge continue to the lens edge (edge rings or tints smear). Transparent: nothing smears, but such lines end early. Reticles without an alpha channel always extend |
 | HUD / Show label | true | Show the offset label on each adjustment |

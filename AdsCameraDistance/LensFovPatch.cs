@@ -22,7 +22,7 @@ namespace Krane.AdsCameraDistance
         private static readonly Fault Fault = new Fault("Lens FOV hook");
         // Optic render texture size (square) while an offset applies. A widened optic FOV spreads the same
         // pixels over a wider view, so the image gets blurrier unless this is raised. Otherwise vanilla's size.
-        internal static int Resolution = 2048;
+        internal static int Resolution = 1536;
         private static int _vanillaResolution;
         private static bool _resolutionStuck;
 
