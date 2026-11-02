@@ -1,0 +1,28 @@
+# FleaCategoryBlock
+
+**Requires:** SPT 4.1.6, Fika 2.4.6 (not used, unaffected). No other mods. Client-only; each player sets it for themselves.
+
+## What
+Lets you stop yourself from buying player offers on the flea market, per handbook subcategory (for example Ammo / Rounds, Medication / Medkits, Barter items / Building materials).
+- Player offers of a disabled subcategory are hidden from the offer list. Trader offers and your own offers stay.
+- The browse tree is unchanged, so trader offers of every subcategory stay reachable. Category counts come from the server and still include the hidden player offers.
+- Buying a disabled player offer (money or barter, single or mass purchase) is refused with a warning, as a fallback.
+
+Disabling a subcategory also covers every subcategory and item below it.
+
+## Why
+Self-imposed flea restrictions (for example no player-bought ammo or meds) without changing the server for everyone.
+
+## How
+- Settings are created from the handbook the first time the flea market settings load after login (postfix on `RagFair.UpdateSettings`). They appear in the config file and Configuration Manager after the first launch into the main menu.
+- Prefix on `RagFair.ProceedWithOffers` removes disabled player offers from each server page before it is cached or shown. The server still pages offers, so a page can show fewer offers than the page size.
+- Prefix on `RagfairScreen.OfferPurchaseHandler` refuses the purchase window.
+
+Changing a setting clears the offer cache. Offers already on screen stay until the list reloads (change category or reopen the flea).
+
+## Settings
+Generated at runtime: one section per top-level handbook category, one entry per subcategory below it (key = path below the top level, e.g. `Functional mods / Sights`).
+
+| Section / Key | Default | Effect |
+|---|---|---|
+| `<top-level category>` / `<subcategory path>` | `false` | Block buying player flea offers in this subcategory and everything below it. |
