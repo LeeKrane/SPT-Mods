@@ -213,27 +213,32 @@ namespace Krane.InstantTraderDialogs
         }
     }
 
-    // Space skip refuses while the current dialog is blocked. A quit line (the goodbye) has no switch action,
-    // so its dialog stays blocked until ForceQuitDialog runs after the animation: let Space end that wait too.
+    // Space skip refuses while the current dialog is blocked. A quit-type line (goodbye, open trading or quests
+    // screen) has no switch action, so its dialog stays blocked until ForceQuitDialog runs after the animation.
+    // Unblock that dialog for the vanilla call only, so Space ends the wait the same way as for other lines.
     [HarmonyPatch(typeof(ClientDialogController), nameof(ClientDialogController.TrySkipAnimation))]
     internal static class QuitLineSkipPatch
     {
-        private static bool Prefix(ClientDialogController __instance, ref bool __result)
+        private static void Prefix(ClientDialogController __instance, out BaseTraderDialog __state)
         {
+            __state = null;
             try
             {
-                if (__instance.CurrentDialog?.IsBlocked != true || __instance._animationTaskSource == null) return true;
-                if (!__instance.list_0.Any(a => a is DialogQuitAction)) return true;
-                __instance._animationTaskSource.TrySetResult(true);
-                __instance._animationController?.SkipAnimation();
-                __result = true;
-                return false;
+                var dialog = __instance.CurrentDialog;
+                if (dialog?.IsBlocked != true || __instance._animationTaskSource == null) return;
+                if (!__instance.list_0.Any(a => a is DialogQuitAction || a is DialogTradingScreenAction || a is DialogQuestsScreenAction)) return;
+                dialog.IsBlocked = false;
+                __state = dialog;
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError("Skipping the goodbye line failed: " + e);
-                return true;
+                Plugin.Log.LogError("Unblocking the quit line for skipping failed: " + e);
             }
+        }
+
+        private static void Finalizer(BaseTraderDialog __state)
+        {
+            if (__state != null) __state.IsBlocked = true;
         }
     }
 

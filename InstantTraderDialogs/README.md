@@ -3,7 +3,7 @@
 **Requires:** SPT 4.1.6, Fika 2.4.6 compatible. Hard dependency: VisitAPI 1.3.7 (`com.sora.visitapi`). Built for the WTT content backport storyline traders whose VisitAPI rooms it replaces; the 3D rooms keep working when the toggle is off.
 
 ## What
-With `SkipTraderRooms` on, the VISIT button opens the trader dialog directly (no room bundle, no loading screen, no 3D scene, no animations); the dialog keeps its own small trader icon. `.dlg` dialogs skip their 3D scene the same way. Raids are untouched. `TraderVoiceVolume` scales trader voice lines in the 3D room and in direct mode. Space also skips the goodbye line before the dialog closes (vanilla ignores Space there), in both modes.
+With `SkipTraderRooms` on, the VISIT button opens the trader dialog directly (no room bundle, no loading screen, no 3D scene, no animations); the dialog keeps its own small trader icon. `.dlg` dialogs skip their 3D scene the same way. Raids are untouched. `TraderVoiceVolume` scales trader voice lines in the 3D room and in direct mode. Space also skips lines that end the dialog (goodbye, open trading or quests screen), which vanilla does not allow. This applies to every trader dialog, in both modes and regardless of `SkipTraderRooms`.
 
 ## Why
 VisitAPI rooms load 300 MB to 1 GB of assets per visit. Direct mode opens instantly.
