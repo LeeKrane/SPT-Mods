@@ -38,6 +38,9 @@ namespace Krane.ItemTweaks
         {
             internal string[] Textures;
             internal Func<Color32, Color32> Map;
+            // Material colors (_SpecColor, _ReflectColor) multiplied through the property block, for items whose reflections
+            // would otherwise keep the model light after the albedo is darkened.
+            internal (int Id, float Factor)[] ColorFactors;
         }
 
         // Hue ranges and targets in degrees, tuned on the vanilla textures (stimulator_* 1024x1024, roll-up kit diffuse).
@@ -51,8 +54,15 @@ namespace Krane.ItemTweaks
             { (MongoID)"3f5582d3b2ae5f2af6083599", new Spec { Textures = new[] { "stimulator_zagustin" }, Map = c => HueShift(c, 275f, 35f, 268f, 1f, 0.6f) } },
             // SJ6-X: blue (about 220 degrees) to cyan.
             { (MongoID)"99bdf12eeb8cff157a1ad9cf", new Spec { Textures = new[] { "stimulator_SJ6" }, Map = c => HueShift(c, 220f, 45f, 185f, 1f, 1.1f) } },
-            // Nightfall: the whole kit (red cross too) multiplied by 0.4, darker than the Redline dossier's default 0.5 tint.
-            { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec { Textures = new[] { "item_meds_survival_first_aid_rollup_kit_LOD0_diff" }, Map = c => Darken(c, 0.4f) } },
+            // Nightfall: the whole kit (red cross too) multiplied by 0.35, darker than the Redline dossier's default 0.5 tint. The vanilla
+            // Surv12 albedo is already dark (mean about 32/255, only the buckles are light), so the material's specular and cube
+            // reflection (_SpecColor 0.74, _ReflectColor alpha 0.5) are scaled down as well, else they keep the model looking light.
+            { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec
+                {
+                    Textures = new[] { "item_meds_survival_first_aid_rollup_kit_LOD0_diff" },
+                    Map = c => Darken(c, 0.35f),
+                    ColorFactors = new[] { (Shader.PropertyToID("_SpecColor"), 0.35f), (Shader.PropertyToID("_ReflectColor"), 0.35f) },
+                } },
             // .300 Winchester Magnum CBJ: the WTT-Armory FMJ bullet and casing darkened.
             { (MongoID)"5efdb8528bd5573c2e4faf1d", new Spec { Textures = new[] { "Bullet.001Diffuse", "Casing.002Diffuse" }, Map = c => Darken(c, 0.45f) } },
         };
@@ -165,6 +175,17 @@ namespace Krane.ItemTweaks
                     var renderer = r;
                     var index = i;
                     var mine = marker;
+                    if (spec.ColorFactors != null)
+                    {
+                        var block = mine.Edit(renderer, index);
+                        foreach (var (id, factor) in spec.ColorFactors)
+                        {
+                            if (!m.HasProperty(id)) continue;
+                            var color = m.GetColor(id);
+                            block.SetColor(id, new Color(color.r * factor, color.g * factor, color.b * factor, color.a));
+                        }
+                        renderer.SetPropertyBlock(block, index);
+                    }
                     WhenRecolored(source, template, spec, sync, copy =>
                     {
                         if (copy == null || mine == null || go == null || renderer == null || go.GetComponent<PropertyBlockMarker>() != mine) return;
