@@ -2,4 +2,7 @@
   <PropertyGroup>
     <AssemblyName>krane.InfectedVariants</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Newtonsoft.Json.dll" Private="false" />
+  </ItemGroup>
 </Project>

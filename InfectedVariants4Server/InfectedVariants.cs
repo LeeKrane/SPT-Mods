@@ -8,7 +8,9 @@ using SPTarkov.Server.Core.Helpers.Server;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Tables;
+using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Services.InRaid;
+using SPTarkov.Server.Core.Utils;
 using SPTarkov.Server.Core.Utils.Cloners;
 using Location = SPTarkov.Server.Core.Models.Eft.Common.Location;
 
@@ -21,6 +23,21 @@ public sealed record InfectedConfig
 
     [JsonPropertyName("InfectedLabsOnlyInfected")]
     public bool? InfectedLabsOnlyInfected { get; init; }
+
+    [JsonPropertyName("EnabledMaps")]
+    public string[]? EnabledMaps { get; init; }
+}
+
+/// <summary>One player-facing map: its key (what EnabledMaps lists), name and location ids (Ground Zero has two).</summary>
+internal sealed record MapSpec(string Key, string Name, string[] Ids);
+
+/// <summary>How an enabled location got its Infected variant.</summary>
+internal enum Mode
+{
+    /// <summary>Unmodded map: this mod registered a shared-data pair and declared "infected" on it.</summary>
+    Pair,
+    /// <summary>A mod replaced the location data, so MapVariants manages it already: "infected" is declared on top of that backport.</summary>
+    Declared,
 }
 
 /// <summary>Shared state for the load-time services and the static Harmony postfix.</summary>
@@ -30,16 +47,33 @@ internal static class State
     public const string Labs = "laboratory";
     public const string ZombieGroup = "halloweenzombies";
     public const string FactoryHalloween = "halloween2026"; // FactoryClassic's declared variant id, MapVariants' wire value
-    public const string Original = "original";              // MapVariants' wire value of the original (our infected Labs; also its answer for an unmanaged map)
+    public const string Original = "original";              // MapVariants' wire value of the original (the infected copy of a Pair map; also its answer for an unmanaged map)
+    public const string Infected = "infected";              // declared variant id on a Declared map, MapVariants' wire value
 
-    public const string Interchange = "interchange";
-    public const string InterchangeInfected = "infected"; // declared variant id on Interchange (built on ManimalInterchange's data), MapVariants' wire value
-
-    public static bool LabsRegistered;       // false: InstalledVariant("laboratory") says "original" for an unmanaged map too
-    public static bool InterchangeEnabled;   // ManimalInterchange present and the "infected" variant declared
-    public static bool LabsOnlyInfected = true;
+    // Every stock raidable map except Factory (FactoryClassic's). Terminal (ManimalTerminal), Icebreaker (ManimalIcebreaker, own id),
+    // Labyrinth (disabled in SPT 4.1.6), Arena, hideout, town, develop, privatearea, suburbs are deliberately absent.
+    public static readonly MapSpec[] Specs =
+    [
+        new("bigmap", "Customs", ["bigmap"]),
+        new("woods", "Woods", ["woods"]),
+        new("shoreline", "Shoreline", ["shoreline"]),
+        new("interchange", "Interchange", ["interchange"]),
+        new("lighthouse", "Lighthouse", ["lighthouse"]),
+        new("rezervbase", "Reserve", ["rezervbase"]),
+        new("tarkovstreets", "Streets of Tarkov", ["tarkovstreets"]),
+        new("sandbox", "Ground Zero", ["sandbox", "sandbox_high"]),
+        new("laboratory", "Labs", ["laboratory"]),
+    ];
 
     public static readonly string[] FactoryIds = ["factory4_day", "factory4_night"];
+
+    /// <summary>Enabled and successfully set up: location id (lower case) to how it is infected. Filled at PostLoad.</summary>
+    public static readonly Dictionary<string, Mode> Modes = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The name of the non-infected variant per registered map key ("Vanilla", or "Manimal"/"Modded" for a Declared map).</summary>
+    public static readonly Dictionary<string, string> BackportNames = new(StringComparer.OrdinalIgnoreCase);
+
+    public static bool LabsOnlyInfected = true;
 
     public static double Percent = 100;
     public static MapVariantsBridge? Bridge;
@@ -47,16 +81,12 @@ internal static class State
     public static ILogger? Log;
     public static ICloner? Cloner;
 
-    public static bool IsManaged(string id) => id == Labs || FactoryIds.Contains(id) || (id == Interchange && InterchangeEnabled);
+    public static bool IsManaged(string id) => FactoryIds.Contains(id) || Modes.ContainsKey(id);
 
-    /// <summary>Zombies spawn only on Factory "halloween2026", the infected (original) Labs and the declared "infected" Interchange.</summary>
-    public static bool IsInfected(string id, string? variant) => id switch
-    {
-        "factory4_day" or "factory4_night" => variant == FactoryHalloween,
-        Labs => LabsRegistered && variant == Original,
-        Interchange => InterchangeEnabled && variant == InterchangeInfected,
-        _ => false,
-    } && Percent > 0; // 0% means no zombies anywhere, so the zombie boss entries are not added either
+    /// <summary>Zombies spawn only on Factory "halloween2026" and on the Infected variant of an enabled map.</summary>
+    public static bool IsInfected(string id, string? variant) => (FactoryIds.Contains(id)
+        ? variant == FactoryHalloween
+        : Modes.ContainsKey(id) && variant == Infected) && Percent > 0; // 0% means no zombies anywhere, so no zombie boss entries either
 }
 
 /// <summary>
@@ -179,10 +209,24 @@ internal static class Enforcer
         return changes.Count == 0 ? null : string.Join(", ", changes);
     }
 
-    private static List<BossLocationSpawn> ZombieEntries(string id) =>
-        State.Seasonal is { } s && s.EventBossSpawns.TryGetValue(State.ZombieGroup, out var byMap) && byMap.TryGetValue(id, out var list)
-            ? list
-            : [];
+    // Maps SPT has no halloweenzombies entry for borrow the first of these (open-zone Infected/PMC/Assault packs + Tagilla), zone cleared.
+    private static readonly string[] FallbackTemplates = ["shoreline", "woods", "bigmap"];
+    private static readonly Dictionary<string, List<BossLocationSpawn>> Fallbacks = new(StringComparer.OrdinalIgnoreCase);
+
+    private static List<BossLocationSpawn> ZombieEntries(string id)
+    {
+        if (State.Seasonal is not { } s || !s.EventBossSpawns.TryGetValue(State.ZombieGroup, out var byMap)) return [];
+        if (byMap.TryGetValue(id, out var list) && list.Count > 0) return list;
+        if (!State.Modes.ContainsKey(id)) return []; // only an enabled infected map needs a fallback
+        lock (Fallbacks)
+        {
+            if (Fallbacks.TryGetValue(id, out var cached)) return cached;
+            var template = FallbackTemplates.Select(t => byMap.TryGetValue(t, out var l) ? (Name: t, List: l) : default).FirstOrDefault(t => t.List is { Count: > 0 });
+            var built = template.List is null ? [] : template.List.Select(e => { var c = State.Cloner!.Clone(e)!; c.BossZone = ""; return c; }).ToList();
+            State.Log?.LogWarning("{Tag} SPT has no '{Group}' boss entries for {Id}; {Count} borrowed from {Template} (open zones)", State.Tag, State.ZombieGroup, id, built.Count, template.Name ?? "nowhere");
+            return Fallbacks[id] = built;
+        }
+    }
 
     private static bool IsInfectedName(string? name) => name?.StartsWith("infected", StringComparison.OrdinalIgnoreCase) == true;
 
@@ -191,8 +235,80 @@ internal static class Enforcer
 }
 
 /// <summary>
-/// PostLoad (before MapVariants' VariantDiscovery at PostLoad + 500000): offers Labs to MapVariants as a vanilla / infected pair
-/// and installs the per-raid enforcement patch.
+/// Asks MapVariants' registry (by reflection, private layout) what happened to a location before this mod ran: whether a mod already
+/// replaced its data (MapVariants will discover it as a backport), or another provider already registered it. Returns Unknown
+/// when the layout is not the expected one, and the caller falls back to the known backport assemblies.
+/// </summary>
+internal sealed class RegistryProbe
+{
+    internal enum Status { Unknown, Unmodified, Replaced, ManagedElsewhere }
+
+    private readonly System.Collections.IDictionary? _entries;
+    private readonly MethodInfo? _capture;
+
+    public RegistryProbe(IServiceProvider provider, ILogger logger)
+    {
+        try
+        {
+            var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("MapVariants.Server.Variants.VariantRegistry", false)).FirstOrDefault(t => t != null);
+            var registry = type is null ? null : provider.GetService(type);
+            _entries = registry is null ? null : type!.GetField("_entries", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(registry) as System.Collections.IDictionary;
+            var fieldSet = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("MapVariants.Server.Variants.LocationFieldSet", false)).FirstOrDefault(t => t != null);
+            _capture = fieldSet?.GetMethod("Capture", BindingFlags.Static | BindingFlags.Public);
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning("{Tag} Could not inspect MapVariants' registry ({Error}); falling back to the known backport mods", State.Tag, e.Message);
+        }
+        if (_entries is null || _capture is null)
+            logger.LogWarning("{Tag} MapVariants' registry layout is not the expected one; falling back to the known backport mods", State.Tag);
+    }
+
+    public Status Check(LocationTable table, string id)
+    {
+        try
+        {
+            if (_entries is null || _capture is null) return Status.Unknown;
+            var key = table.GetMappedKey(id).ToLowerInvariant();
+            if (!_entries.Contains(key)) return Status.Unknown;
+            var entry = _entries[key]!;
+            var entryType = entry.GetType();
+            if (entryType.GetField("Backport")?.GetValue(entry) is not null) return Status.ManagedElsewhere;
+            var original = entryType.GetField("Original")?.GetValue(entry);
+            var live = table.GetLocation(id);
+            if (original is null || live is null) return Status.Unknown;
+            var before = (object?[])original.GetType().GetProperty("References")!.GetValue(original)!;
+            var captured = _capture.Invoke(null, [live])!;
+            var now = (object?[])captured.GetType().GetProperty("References")!.GetValue(captured)!;
+            for (var i = 0; i < Math.Max(before.Length, now.Length); i++)
+                if (!ReferenceEquals(i < before.Length ? before[i] : null, i < now.Length ? now[i] : null)) return Status.Replaced;
+            return Status.Unmodified;
+        }
+        catch
+        {
+            return Status.Unknown;
+        }
+    }
+
+    /// <summary>The backport mods known to replace one location: assembly prefix, and the name their variant gets on the prompt.</summary>
+    private static readonly Dictionary<string, (string Assembly, string Name)> Known = new()
+    {
+        ["interchange"] = ("ManimalInterchange", "Manimal"),
+        ["lighthouse"] = ("ManimalLighthouse", "Manimal"),
+    };
+
+    public static string BackportName(string id) => Known.TryGetValue(id, out var k) && Loaded(k.Assembly) ? k.Name : "Modded";
+
+    public static bool KnownReplaced(string id) => Known.TryGetValue(id, out var k) && Loaded(k.Assembly);
+
+    private static bool Loaded(string prefix) =>
+        AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == true);
+}
+
+/// <summary>
+/// PostLoad (before MapVariants' VariantDiscovery at PostLoad + 500000): for every enabled map either hands MapVariants a vanilla / infected
+/// pair (unmodded map) or declares the "infected" variant on the backport a mod installed (modded map), and installs the per-raid
+/// enforcement patch.
 /// </summary>
 [Injectable(TypePriority = OnLoadOrder.PostLoad)]
 public sealed class InfectedRegistration(
@@ -203,6 +319,8 @@ public sealed class InfectedRegistration(
     ICloner cloner,
     IServiceProvider provider) : IOnLoad
 {
+    private bool _declared;
+
     public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         try
@@ -210,22 +328,32 @@ public sealed class InfectedRegistration(
             State.Log = logger;
             State.Seasonal = seasonalConfig;
             State.Cloner = cloner;
-            LoadConfig();
+            var enabled = LoadConfig();
             State.Bridge = new MapVariantsBridge(provider, logger);
 
             new Harmony("krane.infectedvariantsserver").PatchAll(typeof(InfectedRegistration).Assembly);
-            RegisterLabs();
-            RegisterInterchange();
+
+            var probe = new RegistryProbe(provider, logger);
+            foreach (var spec in State.Specs)
+            {
+                if (enabled is not null && !enabled.Contains(spec.Key) && !spec.Ids.Any(enabled.Contains))
+                {
+                    logger.LogInformation("{Tag} {Map}: not in EnabledMaps; no Infected variant", State.Tag, spec.Name);
+                    continue;
+                }
+                try { RegisterMap(spec, probe); }
+                catch (Exception e) { logger.LogError("{Tag} {Map}: setup threw; no Infected variant there: {Error}", State.Tag, spec.Name, e); }
+            }
         }
         catch (Exception e)
         {
-            logger.LogError("{Tag} Setup failed; Labs stays vanilla and every raid is enforced zombie-free where possible: {Error}", State.Tag, e);
+            logger.LogError("{Tag} Setup failed; every raid is enforced zombie-free where possible: {Error}", State.Tag, e);
         }
         return Task.CompletedTask;
     }
 
-    /// <summary>Sets State.Percent and State.LabsOnlyInfected from config.json; defaults (100, true) on anything invalid.</summary>
-    private void LoadConfig()
+    /// <summary>Sets State.Percent and State.LabsOnlyInfected from config.json (defaults 100, true); returns the EnabledMaps set, null meaning every map.</summary>
+    private HashSet<string>? LoadConfig()
     {
         const double fallback = 100;
         State.Percent = fallback;
@@ -235,75 +363,151 @@ public sealed class InfectedRegistration(
             var cfg = modHelper.GetJsonDataFromFile<InfectedConfig>(folder, "config.json");
             State.LabsOnlyInfected = cfg?.InfectedLabsOnlyInfected ?? true;
             if (cfg?.InfectionPercentage is not { } v || !double.IsFinite(v))
-            {
                 logger.LogWarning("{Tag} invalid or missing InfectionPercentage in config.json (must be a number), using {Default}", State.Tag, fallback);
-                return;
+            else
+            {
+                State.Percent = Math.Clamp(v, 0, 100);
+                if (State.Percent != v) logger.LogWarning("{Tag} InfectionPercentage {Value} out of range, clamped to {Clamped}", State.Tag, v, State.Percent);
             }
-            State.Percent = Math.Clamp(v, 0, 100);
-            if (State.Percent != v) logger.LogWarning("{Tag} InfectionPercentage {Value} out of range, clamped to {Clamped}", State.Tag, v, State.Percent);
+            if (cfg?.EnabledMaps is null) return null;
+            var set = new HashSet<string>(cfg.EnabledMaps.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim().ToLowerInvariant()), StringComparer.OrdinalIgnoreCase);
+            var unknown = set.Where(m => !State.Specs.Any(s => s.Key == m || s.Ids.Contains(m))).ToList();
+            if (unknown.Count > 0) logger.LogWarning("{Tag} EnabledMaps names no known map: {Unknown}", State.Tag, string.Join(", ", unknown));
+            return set;
         }
         catch (Exception e)
         {
-            logger.LogWarning("{Tag} Could not read config.json ({Error}), using {Default}", State.Tag, e.Message, fallback);
+            logger.LogWarning("{Tag} Could not read config.json ({Error}), using defaults", State.Tag, e.Message);
+            return null;
         }
     }
 
-    // Interchange is not registered as a pair: ManimalInterchange replaces its location data at load, so MapVariants' own discovery
-    // finds it (backport = Manimal's data, original = the shipped one). "infected" is declared on top of that backport: the server
-    // serves the same Manimal data and this mod adds the zombies per raid. The client registers the prompt (Manimal / Infected).
-    private void RegisterInterchange()
+    private void RegisterMap(MapSpec spec, RegistryProbe probe)
     {
-        if (!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name?.StartsWith("ManimalInterchange", StringComparison.OrdinalIgnoreCase) == true))
-        {
-            logger.LogDebug("{Tag} ManimalInterchange is not installed; no Infected Interchange", State.Tag);
-            return;
-        }
         var bridge = State.Bridge!;
-        if (!bridge.Available) { logger.LogError("{Tag} MapVariants not usable; no Infected Interchange", State.Tag); return; }
-        if (!bridge.DeclareVariant(State.InterchangeInfected))
+        if (!bridge.Available) { logger.LogError("{Tag} MapVariants not usable; no Infected {Map}", State.Tag, spec.Name); return; }
+
+        var done = new List<string>();
+        foreach (var id in spec.Ids)
         {
-            logger.LogError("{Tag} MapVariants refused or cannot declare '{Id}'; no Infected Interchange", State.Tag, State.InterchangeInfected);
-            return;
+            if (locationTable.GetLocation(id)?.Base is null) { logger.LogError("{Tag} No '{Id}' location in the table; it stays vanilla", State.Tag, id); continue; }
+
+            var status = probe.Check(locationTable, id);
+            if (status == RegistryProbe.Status.Unknown)
+                status = RegistryProbe.KnownReplaced(id) ? RegistryProbe.Status.Replaced : RegistryProbe.Status.Unmodified;
+
+            switch (status)
+            {
+                case RegistryProbe.Status.ManagedElsewhere:
+                    logger.LogWarning("{Tag} {Id} is already managed by another MapVariants provider; no Infected variant there", State.Tag, id);
+                    break;
+                case RegistryProbe.Status.Replaced:
+                    if (DeclareOn(id, spec)) done.Add(id);
+                    break;
+                default:
+                    if (RegisterPair(id, spec)) done.Add(id);
+                    break;
+            }
         }
-        State.InterchangeEnabled = true;
-        logger.LogInformation("{Tag} Interchange: declared '{Id}' on ManimalInterchange's data ({Percent:0.##}%)", State.Tag, State.InterchangeInfected, State.Percent);
+        // A client registers the map's ids as one choice, so a Ground Zero with only one id set up (or the two in different modes) would half-work: all or nothing.
+        if (spec.Ids.Length > 1 && done.Count > 0 && (done.Count != spec.Ids.Length || done.Select(i => State.Modes[i]).Distinct().Count() > 1))
+        {
+            foreach (var id in done) State.Modes.Remove(id);
+            logger.LogError("{Tag} {Map}: only {Done} of {Total} location ids could be set up; no Infected variant there", State.Tag, spec.Name, done.Count, spec.Ids.Length);
+        }
     }
 
-    // Backport (what MapVariants rests on) = the live Labs Location, infection 0. Original = Infected: a copy that shares the
-    // other six fields by reference (so loot mods that edit them in place hit both) and owns a deep-copied Base.
-    private void RegisterLabs()
+    // A mod replaced this location's data (ManimalInterchange, ManimalLighthouse, ...): MapVariants discovers it as the backport at
+    // PostLoad + 500000 (original = the shipped data). "infected" is declared on top of that backport: the server serves the same
+    // modded data and this mod adds the zombies per raid. The client registers the prompt (backport name / Infected).
+    private bool DeclareOn(string id, MapSpec spec)
     {
         var bridge = State.Bridge!;
-        if (!bridge.Available) { logger.LogError("{Tag} MapVariants not usable; Labs stays vanilla (no infection)", State.Tag); return; }
+        if (!_declared)
+        {
+            if (!bridge.DeclareVariant(State.Infected)) { logger.LogError("{Tag} MapVariants refused or cannot declare '{Id}'; no Infected {Map}", State.Tag, State.Infected, spec.Name); return false; }
+            _declared = true;
+        }
+        State.Modes[id] = Mode.Declared;
+        State.BackportNames[spec.Key] = RegistryProbe.BackportName(id);
+        logger.LogInformation("{Tag} {Id}: declared '{Variant}' on the replaced (modded) data, prompt {Backport} / Infected ({Percent:0.##}%)", State.Tag, id, State.Infected, State.BackportNames[spec.Key], State.Percent);
+        return true;
+    }
 
-        var live = locationTable.GetLocation(State.Labs);
-        if (live?.Base is null) { logger.LogError("{Tag} No '{Id}' location in the table; Labs stays vanilla", State.Tag, State.Labs); return; }
-
-        // Copy first, so it keeps whatever the live Base holds (infected bosses included); then the live Base becomes vanilla.
-        var infectedBase = cloner.Clone(live.Base)!;
-        if (infectedBase.Events?.Halloween2024 is { } h) h.InfectionPercentage = State.Percent;
-        var infected = live with { Base = infectedBase };
-
-        Enforcer.Apply(live.Base, State.Labs, infected: false);
-        if (live.Base.BossLocationSpawn is not { Count: > 0 })
+    // Unmodded map. MapVariants only manages a map once a pair is registered, so register a pair whose two Locations are distinct objects
+    // sharing ALL seven fields by reference (the live Base included): both sides are the live data, so nothing any mod does to it can diverge.
+    // MapVariants cannot tell them apart (InstalledVariant would answer the backport for both), so "infected" is declared on top, exactly as
+    // for a replaced map, and the client hides the never-offered "original" tile. Infection and every boss/wave change happen per raid
+    // on SPT's deep-copied raid Base (the PostLoad sweep keeps the shared table Base clean).
+    private bool RegisterPair(string id, MapSpec spec)
+    {
+        var bridge = State.Bridge!;
+        var live = locationTable.GetLocation(id)!;
+        if (id == State.Labs && live.Base.BossLocationSpawn is not { Count: > 0 })
             logger.LogWarning("{Tag} Vanilla Labs has no boss spawns; SPT's zombie disableBosses wiped them. Set PPES halloween.labInfectedOnly to false", State.Tag);
-
         try
         {
-            // MapVariants rests on the backport, so the VANILLA Labs is the backport and the infected copy the original:
-            // an unchosen raid, a transit and the raid-end reset all land on Vanilla.
-            if (!bridge.Register(State.Labs, infected, live))
+            if (!_declared)
             {
-                logger.LogError("{Tag} MapVariants refused the Labs pair; Labs stays vanilla (no infection)", State.Tag);
-                return;
+                if (!bridge.DeclareVariant(State.Infected)) { logger.LogError("{Tag} MapVariants refused or cannot declare '{Id}'; no Infected {Map}", State.Tag, State.Infected, spec.Name); return false; }
+                _declared = true;
             }
-            State.LabsRegistered = true;
-            logger.LogInformation("{Tag} Labs handed to MapVariants: Vanilla (default, no infection) / Infected ({Percent:0.##}%)", State.Tag, State.Percent);
+            if (!bridge.Register(id, live with { }, live))
+            {
+                logger.LogError("{Tag} MapVariants refused the {Id} registration; it stays vanilla (no infection)", State.Tag, id);
+                return false;
+            }
+            State.Modes[id] = Mode.Pair;
+            State.BackportNames[spec.Key] = "Vanilla";
+            logger.LogInformation("{Tag} {Id} handed to MapVariants (shared data): Vanilla (default, no infection) / Infected ({Percent:0.##}%, per raid)", State.Tag, id, State.Percent);
+            return true;
         }
         catch (Exception e)
         {
-            logger.LogError("{Tag} Handing Labs to MapVariants threw; it keeps whatever the table holds: {Error}", State.Tag, e);
+            logger.LogError("{Tag} Handing {Id} to MapVariants threw; it keeps whatever the table holds: {Error}", State.Tag, id, e);
+            return false;
         }
+    }
+}
+
+/// <summary>
+/// The client plugin reads this at the map screen to learn which maps to offer as Infected and how (one entry per player-facing map),
+/// so the server config is the only place a map is switched on or off.
+/// </summary>
+public sealed class MapsResponse
+{
+    [JsonPropertyName("maps")] public List<MapEntry> Maps { get; set; } = [];
+}
+
+public sealed class MapEntry
+{
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("ids")] public List<string> Ids { get; set; } = [];
+    [JsonPropertyName("backport")] public string Backport { get; set; } = "Vanilla";
+}
+
+[Injectable]
+public sealed class InfectedRoutes(JsonUtil jsonUtil, HttpResponseUtil httpResponseUtil) : StaticRouter(jsonUtil,
+[
+    new RouteAction<EmptyRequestData>("/infectedvariants/maps",
+        (url, info, sessionId, output, cancellationToken) => ValueTask.FromResult(httpResponseUtil.NoBody(Describe()))),
+])
+{
+    private static MapsResponse Describe()
+    {
+        var response = new MapsResponse();
+        foreach (var spec in State.Specs)
+        {
+            var ids = spec.Ids.Where(State.Modes.ContainsKey).ToList();
+            if (ids.Count == 0) continue;
+            response.Maps.Add(new MapEntry
+            {
+                Name = spec.Name,
+                Ids = ids,
+                Backport = State.BackportNames.TryGetValue(spec.Key, out var n) ? n : "Vanilla",
+            });
+        }
+        return response;
     }
 }
 
@@ -359,8 +563,8 @@ public sealed class InfectedSweep(ILogger<InfectedSweep> logger, LocationTable l
             }
 
             var badges = SetBadges();
-            logger.LogInformation("{Tag} Sweep: {Count} location base(s) adjusted, badges {Badges}; infection {Percent:0.##}% on Factory halloween2026, infected Labs and infected Interchange only",
-                State.Tag, cleaned, badges, State.Percent);
+            logger.LogInformation("{Tag} Sweep: {Count} location base(s) adjusted, badges {Badges}; infection {Percent:0.##}% on Factory halloween2026 and the infected variant of: {Maps}",
+                State.Tag, cleaned, badges, State.Percent, string.Join(",", State.Modes.Keys));
         }
         catch (Exception e)
         {

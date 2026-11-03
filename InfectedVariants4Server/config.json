@@ -1,4 +1,5 @@
 {
   "InfectionPercentage": 100,
-  "InfectedLabsOnlyInfected": true
+  "InfectedLabsOnlyInfected": true,
+  "EnabledMaps": ["bigmap", "woods", "shoreline", "interchange", "lighthouse", "rezervbase", "tarkovstreets", "sandbox", "laboratory"]
 }

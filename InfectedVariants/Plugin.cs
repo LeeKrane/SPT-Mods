@@ -1,155 +1,206 @@
-// Offers Labs to MapVariants as "Vanilla" / "Infected" and, when ManimalInterchange is installed, Interchange as
-// "Manimal" / "Infected". The server half (InfectedVariants4Server) owns the data: zombies spawn only on Factory
-// "Halloween 2026", the Infected Labs and the Infected Interchange. Registration is reflection only, so a different
-// MapVariants build cannot stop this plugin from loading. The only UI touch is a Harmony prefix on MapVariants' prompt
-// window, which never runs on a headless client (no map screen there).
+// Offers an Infected variant on every stock map to MapVariants' map prompt. The server half (InfectedVariants4Server) owns the data and
+// the zombies: it says which maps to offer and how (GET /infectedvariants/maps), and the registration happens when the map screen
+// is shown, so the server config is the only switch. Registration is reflection only, so a different MapVariants build cannot
+// stop this plugin from loading. The UI touch is two Harmony prefixes on MapVariants' prompt, which never run on a headless
+// client (no map screen there; such a client registers nothing, and nothing here needs to swap on it).
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BepInEx;
-using BepInEx.Bootstrap;
 using BepInEx.Logging;
+using EFT;
+using EFT.UI.Matchmaker;
 using HarmonyLib;
+using Newtonsoft.Json.Linq;
 
 namespace Krane.InfectedVariants
 {
-    [BepInPlugin("krane.infectedvariants", "Krane's InfectedVariants", "1.1.0")]
-    // Hard, and 1.1.0 or later: it also guarantees MapVariants' Awake has run, which makes registering from Awake legal.
+    [BepInPlugin("krane.infectedvariants", "Krane's InfectedVariants", "1.2.0")]
+    // Hard, and 1.1.0 or later: it also guarantees MapVariants' Awake has run, which makes registering later legal.
     [BepInDependency("com.lennoxp90.mapvariants", "1.1.0")]
     // Hard: Factory's Halloween 2026 variant (the other infected map) is FactoryClassic's.
     [BepInDependency("com.lennoxp90.factoryclassic", "1.2.0")]
-    // Soft: Interchange is offered only when it is installed. Declared so it loads first and Chainloader.PluginInfos is reliable here.
-    [BepInDependency(ManimalGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         private const string MapsTypeName = "MapVariants.Client.Api.Maps";
-        private const string ManimalGuid = "com.manimal.interchange";
+        private const string PromptTypeName = "MapVariants.Client.MapVariantPrompt";
         private const string WindowTypeName = "MapVariants.Client.MapChoiceWindow";
-        private const string InterchangeTitle = "CHOOSE YOUR INTERCHANGE"; // MapVariants: "CHOOSE YOUR " + DisplayName.ToUpperInvariant()
-        private const string InfectedId = "infected";                      // must equal the id the server declares
+        private const string RequestTypeName = "SPT.Common.Http.RequestHandler";
+        private const string Route = "/infectedvariants/maps";
+        private const string InfectedId = "infected"; // must equal the id the server declares
 
         internal static ManualLogSource Log;
+
+        private static bool _registered;
+        private static int _attempts;
+        private const int MaxAttempts = 10;
+
+        // Map keys (first location id) whose prompt shows no "original" tile, and whether the prompt being built is one of them.
+        private static readonly HashSet<string> HideOriginalFor = new HashSet<string>();
+        private static bool _hideOriginalNow;
+        private static bool _promptPatched;
 
         private void Awake()
         {
             Log = Logger;
             try
             {
-                Register();
+                // Awake runs once per screen instance, so a failed attempt there could never be retried; Show runs on every opening.
+                var show = AccessTools.DeclaredMethod(typeof(MatchMakerSelectionLocationScreen), "Show", new[] { typeof(IEftSession), typeof(RaidSettings), typeof(MatchmakerPlayersController) });
+                if (show == null) { Log.LogError("MatchMakerSelectionLocationScreen.Show not found; no map is offered as Infected."); return; }
+                new Harmony("krane.infectedvariants.screen").Patch(show, postfix: new HarmonyMethod(AccessTools.Method(typeof(Plugin), nameof(OnMapScreen))));
             }
             catch (Exception e)
             {
-                Log.LogError($"Registering Labs with MapVariants threw; Labs is not offered as Infected: {e}");
+                Log.LogError($"Could not hook the map screen; no map is offered as Infected: {e}");
             }
+        }
 
+        // Every time the map screen is shown until registered: the session exists, so the server can be asked what to register. Retried
+        // on the next showing (up to MaxAttempts) when the server did not answer. The request is SPT's synchronous GetJson, once per
+        // showing at most. MapVariants prompts only on Next/Ready, after Show, so registration is always in place by then.
+        private static void OnMapScreen()
+        {
+            if (_registered || _attempts >= MaxAttempts) return;
+            _attempts++;
             try
             {
-                RegisterInterchange();
+                var json = Get(Route);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    Log.LogWarning($"The server did not answer {Route} (attempt {_attempts} of {MaxAttempts}); is InfectedVariants4Server installed? No map is offered as Infected.");
+                    return;
+                }
+                var response = JObject.Parse(json); // a bad answer throws here and stays retryable
+                _registered = true;
+                RegisterAll(response);
             }
             catch (Exception e)
             {
-                Log.LogError($"Registering Interchange with MapVariants threw; Interchange is not offered as Infected: {e}");
+                Log.LogError($"Registering the Infected variants threw (attempt {_attempts} of {MaxAttempts}): {e}");
             }
         }
 
-        private static void Register()
+        private static string Get(string route)
         {
-            var type = AccessTools.TypeByName(MapsTypeName);
-            if (type == null)
+            var type = AccessTools.TypeByName(RequestTypeName);
+            var get = type == null ? null : AccessTools.Method(type, "GetJson", new[] { typeof(string) });
+            if (get == null)
             {
-                Log.LogError($"{MapsTypeName} not found. MapVariants is a hard dependency, so this should be unreachable.");
-                return;
+                Log.LogError($"{RequestTypeName}.GetJson not found; no map is offered as Infected.");
+                return null;
             }
-
-            var register = AccessTools.Method(type, "Register", new[]
-            {
-                typeof(string[]), typeof(string), typeof(string), typeof(string),
-                typeof(string), typeof(string), typeof(Action<string>), typeof(Func<string[]>)
-            });
-            if (register == null)
-            {
-                Log.LogError($"{MapsTypeName}.Register has an unexpected signature; Labs is not offered as Infected.");
-                return;
-            }
-
-            // backportName is the variant's name alone ("Vanilla"); MapVariants composes "Labs - Vanilla" itself.
-            // The server registers the vanilla Labs as the backport (what MapVariants rests on and defaults to)
-            // and the infected copy as the original, so the default is Vanilla.
-            var result = register.Invoke(null, new object[]
-            {
-                new[] { "laboratory" }, "Labs", "Vanilla", "Infected", null, null, new Action<string>(_ => { }), null
-            });
-
-            if (result is bool ok && ok) Log.LogInfo("Registered Labs with MapVariants (Infected / Vanilla)");
-            else Log.LogError("MapVariants refused the Labs registration; look for a [MV] Register refused line above this one.");
+            return get.Invoke(null, new object[] { route }) as string;
         }
 
-        // Interchange has no maps.json entry on purpose: this is a provider registration, so MapVariants never touches
-        // ManimalInterchange's patches (they stay live for both variants) and no standDown applies. The server auto-discovers
-        // Interchange (Manimal data = backport) and "infected" is declared on top of it by InfectedVariants4Server.
-        private static void RegisterInterchange()
+        private static void RegisterAll(JObject response)
         {
-            if (!Chainloader.PluginInfos.ContainsKey(ManimalGuid)) return; // not installed: skip quietly
+            var maps = response["maps"] as JArray;
+            if (maps == null || maps.Count == 0) { Log.LogInfo("The server offers no Infected maps."); return; }
 
             var type = AccessTools.TypeByName(MapsTypeName);
-            var register = type == null ? null : AccessTools.Method(type, "RegisterVariants", new[]
+            if (type == null) { Log.LogError($"{MapsTypeName} not found. MapVariants is a hard dependency, so this should be unreachable."); return; }
+
+            var registerVariants = AccessTools.Method(type, "RegisterVariants", new[]
             {
                 typeof(string[]), typeof(string), typeof(string), typeof(string), typeof(string), typeof(string),
                 typeof(string[]), typeof(string[]), typeof(string[]), typeof(Action<string>), typeof(Func<string[]>)
             });
-            if (register == null)
+            var isManaged = AccessTools.Method(type, "IsManaged", new[] { typeof(string) });
+            if (registerVariants == null) { Log.LogError($"{MapsTypeName}.RegisterVariants not found (needs MapVariants 1.1.0, API 3.1); no map is offered as Infected."); return; }
+
+            var offered = new List<string>();
+            foreach (var entry in maps.OfType<JObject>())
             {
-                Log.LogError($"{MapsTypeName}.RegisterVariants not found (needs MapVariants 1.1.0, API 3.1); Interchange is not offered as Infected.");
-                return;
+                var name = (string)entry["name"];
+                var backport = (string)entry["backport"] ?? "Vanilla";
+                var ids = (entry["ids"] as JArray)?.Select(t => (string)t).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+                if (string.IsNullOrEmpty(name) || ids == null || ids.Length == 0) continue;
+
+                try
+                {
+                    if (isManaged != null && ids.Any(id => isManaged.Invoke(null, new object[] { id }) is bool b && b))
+                    {
+                        Log.LogError($"{name}: MapVariants already manages one of {string.Join(",", ids)} (a maps.json entry?); remove that entry, or {name} is not offered as Infected.");
+                        continue;
+                    }
+
+                    // Both base names equal: the backport is the default, and the original can then never be the F12 default or a
+                    // transit preference (DefaultSelection matches the backport name first). The original tile itself is removed from the prompt.
+                    var result = registerVariants.Invoke(null, new object[]
+                    {
+                        ids, name, backport, backport, null, null,
+                        new[] { InfectedId }, new[] { "Infected" }, null,
+                        new Action<string>(v => OnDeclaredVariant(name, v)), null
+                    });
+                    if (result is bool d && d) HideOriginalFor.Add(ids[0].Trim().ToLowerInvariant());
+
+                    if (result is bool ok && ok) { offered.Add($"{name} ({backport} / Infected)"); }
+                    else Log.LogError($"MapVariants refused the {name} registration; look for a [MV] Register line above this one.");
+                }
+                catch (Exception e)
+                {
+                    Log.LogError($"Registering {name} threw; it is not offered as Infected: {e}");
+                }
             }
 
-            // Both base names are "Manimal": the backport is the default, and the original can then never be the F12 default
-            // or a transit preference (DefaultSelection matches the backport name first). The Vanilla tile itself is removed
-            // from the prompt by HidePlainTile.
-            var result = register.Invoke(null, new object[]
-            {
-                new[] { "interchange" }, "Interchange", "Manimal", "Manimal", null, null,
-                new[] { InfectedId }, new[] { "Infected" }, null,
-                new Action<string>(OnInterchangeVariant), null
-            });
-
-            if (!(result is bool ok && ok))
-            {
-                Log.LogError("MapVariants refused the Interchange registration (a maps.json entry for interchange would cause this); look for a [MV] Register line above.");
-                return;
-            }
-            Log.LogInfo("Registered Interchange with MapVariants (Manimal / Infected)");
-            PatchPrompt();
+            Log.LogInfo($"Registered with MapVariants: {(offered.Count == 0 ? "nothing" : string.Join(", ", offered))}");
+            if (HideOriginalFor.Count > 0) PatchPrompt();
         }
 
-        private static void OnInterchangeVariant(string variant)
+        private static void OnDeclaredVariant(string map, string variant)
         {
-            // Nothing to swap: ManimalInterchange's patches stay live for both. Only "original" is worth a line, because it
-            // would mean the server serves shipped data under Manimal's scenes.
+            // Nothing to swap: the backport mod's patches stay live for both variants (MapVariants never touches a provider's patches).
+            // Only "original" is worth a line, because it would mean the server serves shipped data under the backport's scenes.
             if (string.Equals(variant, "original", StringComparison.OrdinalIgnoreCase))
-                Log.LogWarning("Interchange resolved to 'original' (vanilla data); this setup does not offer that. Pick Manimal or Infected.");
+                Log.LogWarning($"{map} resolved to 'original' (vanilla data); this setup does not offer that. Pick the other two.");
         }
 
         private static void PatchPrompt()
         {
+            if (_promptPatched) return;
+            var prompt = AccessTools.TypeByName(PromptTypeName);
+            var choose = prompt == null ? null : AccessTools.Method(prompt, "ShowChoice");
             var window = AccessTools.TypeByName(WindowTypeName);
             var show = window == null ? null : AccessTools.Method(window, "Show");
-            if (show == null || show.GetParameters().Length != 4)
+            if (choose == null || choose.GetParameters().Length != 2 || show == null || show.GetParameters().Length != 4)
             {
-                Log.LogWarning($"{WindowTypeName}.Show not found as expected; the Interchange prompt will also show a Vanilla tile.");
+                Log.LogWarning($"{PromptTypeName}.ShowChoice / {WindowTypeName}.Show not found as expected; the prompts of backport-based maps will also show their original tile.");
                 return;
             }
-            new Harmony("krane.infectedvariants.prompt").Patch(show,
-                prefix: new HarmonyMethod(AccessTools.Method(typeof(Plugin), nameof(HidePlainTile))));
+            var harmony = new Harmony("krane.infectedvariants.prompt");
+            harmony.Patch(choose, prefix: new HarmonyMethod(AccessTools.Method(typeof(Plugin), nameof(MarkPrompt))));
+            harmony.Patch(show, prefix: new HarmonyMethod(AccessTools.Method(typeof(Plugin), nameof(HideOriginalTile))));
+            _promptPatched = true;
         }
 
-        // Show(string title, Choice[] choices, string[] warnings, Action<string> done). Drops the "original" tile of the
-        // Interchange prompt only, by swapping in a filtered array (Choice is internal, so it is built by reflection).
-        private static void HidePlainTile(object[] __args)
+        // ShowChoice(ManagedMap map, Action<string> done) builds the prompt for one map and calls Show synchronously (map screen and
+        // transit alike), so the map's key, its first location id, says which prompt Show is building. Matched by id, never by title.
+        private static void MarkPrompt(object[] __args)
         {
+            _hideOriginalNow = false;
             try
             {
-                if (!(__args[0] is string title) || title != InterchangeTitle || !(__args[1] is Array choices)) return;
+                var map = __args[0];
+                var key = map?.GetType().GetProperty("Key")?.GetValue(map, null) as string;
+                _hideOriginalNow = key != null && HideOriginalFor.Contains(key.ToLowerInvariant());
+            }
+            catch (Exception e)
+            {
+                Log.LogError($"Reading the prompt's map failed, it shows its original tile: {e}");
+            }
+        }
+
+        // Show(string title, Choice[] choices, string[] warnings, Action<string> done). Drops the "original" tile when MarkPrompt flagged
+        // this prompt, by swapping in a filtered array (Choice is internal, so it is built by reflection).
+        private static void HideOriginalTile(object[] __args)
+        {
+            if (!_hideOriginalNow) return;
+            _hideOriginalNow = false;
+            try
+            {
+                if (!(__args[1] is Array choices)) return;
                 var element = choices.GetType().GetElementType();
                 var variant = element.GetField("Variant");
                 if (variant == null) return;
@@ -163,7 +214,7 @@ namespace Krane.InfectedVariants
             }
             catch (Exception e)
             {
-                Log.LogError($"Hiding the Vanilla Interchange tile failed, the prompt shows it: {e}");
+                Log.LogError($"Hiding the original tile failed, the prompt shows it: {e}");
             }
         }
     }
