@@ -32,7 +32,11 @@ internal static class State
     public const string FactoryHalloween = "halloween2026"; // FactoryClassic's declared variant id, MapVariants' wire value
     public const string Original = "original";              // MapVariants' wire value of the original (our infected Labs; also its answer for an unmanaged map)
 
+    public const string Interchange = "interchange";
+    public const string InterchangeInfected = "infected"; // declared variant id on Interchange (built on ManimalInterchange's data), MapVariants' wire value
+
     public static bool LabsRegistered;       // false: InstalledVariant("laboratory") says "original" for an unmanaged map too
+    public static bool InterchangeEnabled;   // ManimalInterchange present and the "infected" variant declared
     public static bool LabsOnlyInfected = true;
 
     public static readonly string[] FactoryIds = ["factory4_day", "factory4_night"];
@@ -43,13 +47,14 @@ internal static class State
     public static ILogger? Log;
     public static ICloner? Cloner;
 
-    public static bool IsManaged(string id) => id == Labs || FactoryIds.Contains(id);
+    public static bool IsManaged(string id) => id == Labs || FactoryIds.Contains(id) || (id == Interchange && InterchangeEnabled);
 
-    /// <summary>Zombies spawn only on Factory "halloween2026" and on the infected (original) Labs.</summary>
+    /// <summary>Zombies spawn only on Factory "halloween2026", the infected (original) Labs and the declared "infected" Interchange.</summary>
     public static bool IsInfected(string id, string? variant) => id switch
     {
         "factory4_day" or "factory4_night" => variant == FactoryHalloween,
         Labs => LabsRegistered && variant == Original,
+        Interchange => InterchangeEnabled && variant == InterchangeInfected,
         _ => false,
     } && Percent > 0; // 0% means no zombies anywhere, so the zombie boss entries are not added either
 }
@@ -65,6 +70,7 @@ internal sealed class MapVariantsBridge
     private readonly object? _providers;
     private readonly MethodInfo? _register;
     private readonly MethodInfo? _installedVariant;
+    private readonly MethodInfo? _declareVariant;
 
     public MapVariantsBridge(IServiceProvider provider, ILogger logger)
     {
@@ -77,6 +83,7 @@ internal sealed class MapVariantsBridge
         _providers = provider.GetService(type);
         _register = type.GetMethod("Register", [typeof(string), typeof(Location), typeof(Location)]);
         _installedVariant = type.GetMethod("InstalledVariant", [typeof(string)]);
+        _declareVariant = type.GetMethod("DeclareVariant", [typeof(string)]); // MapVariants 1.1.0+ (API 3.1)
         if (_providers is null || _register is null || _installedVariant is null)
         {
             logger.LogError("{Tag} MapVariants' provider surface is not the expected layout (instance={Inst}, Register={Reg}, InstalledVariant={Inst2})",
@@ -92,6 +99,14 @@ internal sealed class MapVariantsBridge
     {
         if (_providers is null) return false;
         return _register!.Invoke(_providers, [locationId, original, backport]) is not false;
+    }
+
+    /// <summary>False when unavailable, when MapVariants predates declared variants, or when it refuses the id.</summary>
+    public bool DeclareVariant(string variant)
+    {
+        if (_providers is null || _declareVariant is null) return false;
+        try { return _declareVariant.Invoke(_providers, [variant]) is true; }
+        catch { return false; }
     }
 
     /// <summary>MapVariants' wire value ("original", "backport" or a declared id), null when unavailable or it throws.</summary>
@@ -200,6 +215,7 @@ public sealed class InfectedRegistration(
 
             new Harmony("krane.infectedvariantsserver").PatchAll(typeof(InfectedRegistration).Assembly);
             RegisterLabs();
+            RegisterInterchange();
         }
         catch (Exception e)
         {
@@ -230,6 +246,27 @@ public sealed class InfectedRegistration(
         {
             logger.LogWarning("{Tag} Could not read config.json ({Error}), using {Default}", State.Tag, e.Message, fallback);
         }
+    }
+
+    // Interchange is not registered as a pair: ManimalInterchange replaces its location data at load, so MapVariants' own discovery
+    // finds it (backport = Manimal's data, original = the shipped one). "infected" is declared on top of that backport: the server
+    // serves the same Manimal data and this mod adds the zombies per raid. The client registers the prompt (Manimal / Infected).
+    private void RegisterInterchange()
+    {
+        if (!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name?.StartsWith("ManimalInterchange", StringComparison.OrdinalIgnoreCase) == true))
+        {
+            logger.LogDebug("{Tag} ManimalInterchange is not installed; no Infected Interchange", State.Tag);
+            return;
+        }
+        var bridge = State.Bridge!;
+        if (!bridge.Available) { logger.LogError("{Tag} MapVariants not usable; no Infected Interchange", State.Tag); return; }
+        if (!bridge.DeclareVariant(State.InterchangeInfected))
+        {
+            logger.LogError("{Tag} MapVariants refused or cannot declare '{Id}'; no Infected Interchange", State.Tag, State.InterchangeInfected);
+            return;
+        }
+        State.InterchangeEnabled = true;
+        logger.LogInformation("{Tag} Interchange: declared '{Id}' on ManimalInterchange's data ({Percent:0.##}%)", State.Tag, State.InterchangeInfected, State.Percent);
     }
 
     // Backport (what MapVariants rests on) = the live Labs Location, infection 0. Original = Infected: a copy that shares the
@@ -322,7 +359,7 @@ public sealed class InfectedSweep(ILogger<InfectedSweep> logger, LocationTable l
             }
 
             var badges = SetBadges();
-            logger.LogInformation("{Tag} Sweep: {Count} location base(s) adjusted, badges {Badges}; infection {Percent:0.##}% on Factory halloween2026 and infected Labs only",
+            logger.LogInformation("{Tag} Sweep: {Count} location base(s) adjusted, badges {Badges}; infection {Percent:0.##}% on Factory halloween2026, infected Labs and infected Interchange only",
                 State.Tag, cleaned, badges, State.Percent);
         }
         catch (Exception e)
@@ -340,7 +377,7 @@ public sealed class InfectedSweep(ILogger<InfectedSweep> logger, LocationTable l
         foreach (var key in map.Keys.ToList())
         {
             var k = key.ToLowerInvariant();
-            map[key] = k is "factory4" or "factory4_day" or "factory4_night" or State.Labs ? (int)Math.Round(State.Percent) : 0;
+            map[key] = k == "factory4" || State.IsManaged(k) ? (int)Math.Round(State.Percent) : 0;
         }
         return string.Join(",", map.Where(p => p.Value > 0).Select(p => p.Key));
     }
