@@ -16,7 +16,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Krane.InfectedVariants
 {
-    [BepInPlugin("krane.infectedvariants", "Krane's InfectedVariants", "1.2.0")]
+    [BepInPlugin("krane.infectedvariants", "Krane's InfectedVariants", "1.2.1")]
     // Hard, and 1.1.0 or later: it also guarantees MapVariants' Awake has run, which makes registering later legal.
     [BepInDependency("com.lennoxp90.mapvariants", "1.1.0")]
     // Hard: Factory's Halloween 2026 variant (the other infected map) is FactoryClassic's.
@@ -29,6 +29,10 @@ namespace Krane.InfectedVariants
         private const string RequestTypeName = "SPT.Common.Http.RequestHandler";
         private const string Route = "/infectedvariants/maps";
         private const string InfectedId = "infected"; // must equal the id the server declares
+        private const string ClientMapsTypeName = "MapVariants.Client.ClientMaps";
+        private const string FactoryKey = "factory4_day";      // either Factory id finds the one map FactoryClassic registered
+        private const string FactoryHalloweenId = "halloween2026"; // FactoryClassic's declared variant id
+        private const string InfectedName = "Infected";
 
         internal static ManualLogSource Log;
 
@@ -44,6 +48,7 @@ namespace Krane.InfectedVariants
         private void Awake()
         {
             Log = Logger;
+            RenameFactoryHalloween();
             try
             {
                 // Awake runs once per screen instance, so a failed attempt there could never be retried; Show runs on every opening.
@@ -54,6 +59,45 @@ namespace Krane.InfectedVariants
             catch (Exception e)
             {
                 Log.LogError($"Could not hook the map screen; no map is offered as Infected: {e}");
+            }
+        }
+
+        // FactoryClassic registered Factory in its Awake (ours runs after it: hard dependency), naming its third variant "Halloween 2026".
+        // Every label (prompt tile, loading screen, notifications) is composed from the registered ExtraVariant.Name at use, so renaming that
+        // one object renames them all; the F12 DefaultSelection list was built from the old name once, so its array and the stored value follow.
+        private static void RenameFactoryHalloween()
+        {
+            try
+            {
+                var clientMaps = AccessTools.TypeByName(ClientMapsTypeName);
+                var set = clientMaps == null ? null : AccessTools.Field(clientMaps, "Set")?.GetValue(null);
+                var map = set?.GetType().GetMethod("For", new[] { typeof(string) })?.Invoke(set, new object[] { FactoryKey });
+                if (map == null) { Log.LogWarning($"Factory is not registered with MapVariants (or its layout changed); its Halloween 2026 variant keeps that name."); return; }
+
+                var extra = (map.GetType().GetProperty("Extras")?.GetValue(map, null) as Array)?.Cast<object>()
+                    .FirstOrDefault(x => string.Equals(x.GetType().GetProperty("Id")?.GetValue(x, null) as string, FactoryHalloweenId, StringComparison.OrdinalIgnoreCase));
+                var nameProp = extra?.GetType().GetProperty("Name");
+                var oldName = nameProp?.GetValue(extra, null) as string;
+                var field = extra == null ? null : AccessTools.Field(extra.GetType(), "<Name>k__BackingField");
+                if (field == null || string.IsNullOrEmpty(oldName)) { Log.LogWarning("Factory's Halloween 2026 variant was not found; it keeps that name."); return; }
+                if (oldName == InfectedName) return;
+                field.SetValue(extra, InfectedName);
+
+                // F12: the option list and, when it holds the old name, the stored default (it would otherwise read as an invalid value).
+                var key = map.GetType().GetProperty("Key")?.GetValue(map, null) as string;
+                var defaults = AccessTools.Field(clientMaps, "Defaults")?.GetValue(null) as System.Collections.IDictionary;
+                if (key != null && defaults != null && defaults[key] is BepInEx.Configuration.ConfigEntryBase entry)
+                {
+                    if (entry.Description?.AcceptableValues is BepInEx.Configuration.AcceptableValueList<string> list)
+                        for (var i = 0; i < list.AcceptableValues.Length; i++)
+                            if (list.AcceptableValues[i] == oldName) list.AcceptableValues[i] = InfectedName;
+                    if (string.Equals(entry.GetSerializedValue(), oldName, StringComparison.OrdinalIgnoreCase)) entry.BoxedValue = InfectedName;
+                }
+                Log.LogInfo($"Renamed Factory's '{oldName}' variant to '{InfectedName}'.");
+            }
+            catch (Exception e)
+            {
+                Log.LogError($"Could not rename Factory's Halloween 2026 variant; it keeps that name: {e}");
             }
         }
 
@@ -152,7 +196,9 @@ namespace Krane.InfectedVariants
         private static void OnDeclaredVariant(string map, string variant)
         {
             // Nothing to swap: the backport mod's patches stay live for both variants (MapVariants never touches a provider's patches).
-            // Only "original" is worth a line, because it would mean the server serves shipped data under the backport's scenes.
+            // Logged on every call so a raid's log shows which variant this client was told (and when) if a load ever misbehaves;
+            // "original" also warns, because it would mean the server serves shipped data under the backport's scenes.
+            Log.LogInfo($"{map}: MapVariants resolved '{variant}'.");
             if (string.Equals(variant, "original", StringComparison.OrdinalIgnoreCase))
                 Log.LogWarning($"{map} resolved to 'original' (vanilla data); this setup does not offer that. Pick the other two.");
         }
