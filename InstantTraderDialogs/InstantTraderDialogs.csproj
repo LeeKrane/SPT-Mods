@@ -6,6 +6,7 @@
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.UIModule.dll" Private="false" />
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.UI.dll" Private="false" />
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/Comfort.Unity.dll" Private="false" />
+    <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/CommonExtensions.dll" Private="false" />
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/UnityEngine.AudioModule.dll" Private="false" />
     <Reference Include="$(SptDir)/EscapeFromTarkov_Data/Managed/uLipSync.Runtime.dll" Private="false" />
     <Reference Include="$(SptDir)/BepInEx/plugins/VisitAPI/VisitAPI.dll" Private="false" />

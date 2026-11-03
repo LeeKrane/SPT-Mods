@@ -213,6 +213,30 @@ namespace Krane.InstantTraderDialogs
         }
     }
 
+    // Space skip refuses while the current dialog is blocked. A quit line (the goodbye) has no switch action,
+    // so its dialog stays blocked until ForceQuitDialog runs after the animation: let Space end that wait too.
+    [HarmonyPatch(typeof(ClientDialogController), nameof(ClientDialogController.TrySkipAnimation))]
+    internal static class QuitLineSkipPatch
+    {
+        private static bool Prefix(ClientDialogController __instance, ref bool __result)
+        {
+            try
+            {
+                if (__instance.CurrentDialog?.IsBlocked != true || __instance._animationTaskSource == null) return true;
+                if (!__instance.list_0.Any(a => a is DialogQuitAction)) return true;
+                __instance._animationTaskSource.TrySetResult(true);
+                __instance._animationController?.SkipAnimation();
+                __result = true;
+                return false;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError("Skipping the goodbye line failed: " + e);
+                return true;
+            }
+        }
+    }
+
     // 3D room voice: PlayAudioSource sets audioSource.volume = volume. `volume` also drives the lip sync
     // amplitude, so only the AudioSource is scaled.
     [HarmonyPatch(typeof(uLipSync.uLipSyncBakedDataPlayer), "PlayAudioSource")]
