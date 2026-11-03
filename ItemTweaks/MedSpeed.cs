@@ -1,8 +1,8 @@
-// Surv16 (ItemTweaks4Server template 6190dcad54cbff2ac9b7b8f4, a Surv12 clone with half its medUseTime) plays its use animation
+// Nightfall (ItemTweaks4Server template 6190dcad54cbff2ac9b7b8f4, a Surv12 clone with half its medUseTime) plays its use animation
 // at 2x speed. The animation speed is the animator float UseTimeMultiplier, set through FirearmsAnimator.SetUseTimeMultiplier by:
 // MedsController.Setup (1 + surgery skill, overwritten before the first limb locally), MedsInHandsOperation.GoNextBodyPart (local
 // player and bots, once per limb) and, for Fika observed players, the same Setup inside ObservedMedsController.Create plus
-// ObservedMedsOperation.HealthController_EffectRemovedEvent (next limb). While one of these runs for a Surv16, a prefix on
+// ObservedMedsOperation.HealthController_EffectRemovedEvent (next limb). While one of these runs for a Nightfall, a prefix on
 // SetUseTimeMultiplier doubles the value the game computed. The heal itself is timed by medUseTime
 // (ActiveHealthController med effect), not by the animation. Leave is a finalizer, so a throwing patched method cannot leave the scope open.
 using System;
@@ -14,7 +14,7 @@ namespace Krane.ItemTweaks
 {
     internal static class MedSpeed
     {
-        private static readonly MongoID Surv16Id = "6190dcad54cbff2ac9b7b8f4";
+        private static readonly MongoID NightfallId = "6190dcad54cbff2ac9b7b8f4";
         private const float Factor = 2f;
 
         // Main thread only (hands controllers and health events), so a plain counter is enough.
@@ -44,13 +44,13 @@ namespace Krane.ItemTweaks
         // __state: whether this call entered the scope, so Leave only undoes its own Enter.
         private static void OperationPrefix(Player.MedsController.MedsInHandsOperation __instance, out bool __state)
         {
-            __state = __instance?._controller?.Item?.TemplateId == Surv16Id;
+            __state = __instance?._controller?.Item?.TemplateId == NightfallId;
             if (__state) _scope++;
         }
 
         private static void CreatePrefix(Item item, out bool __state)
         {
-            __state = item?.TemplateId == Surv16Id;
+            __state = item?.TemplateId == NightfallId;
             if (__state) _scope++;
         }
 

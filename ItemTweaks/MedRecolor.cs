@@ -1,6 +1,6 @@
-// Client side of the ItemTweaks4Server clones that reuse a model with other colors: X-Propital (light orange instead of yellow),
-// X-Adrenaline (dark orange instead of red), X-Zagustin (dark violet instead of purple), Surv16 (light gray instead of the dark
-// Surv12 roll-up kit) and .300 Winchester Magnum CBJ (the WTT-Armory FMJ cartridge, darker).
+// Client side of the ItemTweaks4Server clones that reuse a model with other colors: Propital-X (light orange instead of yellow),
+// Adrenaline-X (dark orange instead of red), Zagustin-X (dark violet instead of purple), SJ6-X (cyan instead of blue), Nightfall (the
+// Surv12 roll-up kit, much darker) and .300 Winchester Magnum CBJ (the WTT-Armory FMJ cartridge, darker).
 //
 // A tint cannot do this (multiplying red never gives orange), so the albedo itself is recolored: the model's _MainTex (bundle
 // textures are not CPU-readable) is blitted to an sRGB RenderTexture, read back as raw sRGB bytes (no color conversion in either path),
@@ -43,14 +43,16 @@ namespace Krane.ItemTweaks
         // Hue ranges and targets in degrees, tuned on the vanilla textures (stimulator_* 1024x1024, roll-up kit diffuse).
         private static readonly Dictionary<MongoID, Spec> Specs = new Dictionary<MongoID, Spec>
         {
-            // X-Propital: yellow (about 50 degrees) to light orange.
+            // Propital-X: yellow (about 50 degrees) to light orange.
             { (MongoID)"3d8e6f5ae7ea46f17f0fa1a5", new Spec { Textures = new[] { "stimulator_propital" }, Map = c => HueShift(c, 50f, 30f, 32f, 0.8f, 1.3f) } },
-            // X-Adrenaline: red to dark orange.
+            // Adrenaline-X: red to dark orange.
             { (MongoID)"746f40f23c943aa94650ab0b", new Spec { Textures = new[] { "stimulator_adrenaline" }, Map = c => HueShift(c, 0f, 25f, 24f, 1f, 1.15f) } },
-            // X-Zagustin: purple (about 275 degrees) to dark violet.
+            // Zagustin-X: purple (about 275 degrees) to dark violet.
             { (MongoID)"3f5582d3b2ae5f2af6083599", new Spec { Textures = new[] { "stimulator_zagustin" }, Map = c => HueShift(c, 275f, 35f, 268f, 1f, 0.6f) } },
-            // Surv16: the dark kit to light gray, the red cross stays.
-            { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec { Textures = new[] { "item_meds_survival_first_aid_rollup_kit_LOD0_diff" }, Map = c => LightGray(c, 0.38f, 1.4f) } },
+            // SJ6-X: blue (about 220 degrees) to cyan.
+            { (MongoID)"99bdf12eeb8cff157a1ad9cf", new Spec { Textures = new[] { "stimulator_SJ6" }, Map = c => HueShift(c, 220f, 45f, 185f, 1f, 1.1f) } },
+            // Nightfall: the whole kit (red cross too) multiplied by 0.4, darker than the Redline dossier's default 0.5 tint.
+            { (MongoID)"6190dcad54cbff2ac9b7b8f4", new Spec { Textures = new[] { "item_meds_survival_first_aid_rollup_kit_LOD0_diff" }, Map = c => Darken(c, 0.4f) } },
             // .300 Winchester Magnum CBJ: the WTT-Armory FMJ bullet and casing darkened.
             { (MongoID)"5efdb8528bd5573c2e4faf1d", new Spec { Textures = new[] { "Bullet.001Diffuse", "Casing.002Diffuse" }, Map = c => Darken(c, 0.45f) } },
         };
@@ -461,16 +463,6 @@ namespace Krane.ItemTweaks
         private static Color32 Darken(Color32 c, float factor)
         {
             return new Color32((byte)(c.r * factor), (byte)(c.g * factor), (byte)(c.b * factor), c.a);
-        }
-
-        // Gray from luminance, lifted to a light gray; strongly colored bright pixels (the red cross) stay.
-        private static Color32 LightGray(Color32 c, float lift, float gain)
-        {
-            Color.RGBToHSV(c, out _, out var s, out var v);
-            if (s >= 0.5f && v > 0.3f) return c;
-            float lum = (0.299f * c.r + 0.587f * c.g + 0.114f * c.b) / 255f;
-            byte g = (byte)Mathf.RoundToInt(Mathf.Clamp01(lift + lum * gain) * 255f);
-            return new Color32(g, g, g, c.a);
         }
     }
 }

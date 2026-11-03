@@ -5,25 +5,25 @@
     "handbookParentId": "5b47574386f77428ca22b33a",
     "overrideProperties": {
       "medUseTime": 2,
-      "StimulatorBuffs": "KraneBuffsXZagustin",
+      "StimulatorBuffs": "KraneBuffsZagustinX",
       "effects_damage": {
         "HeavyBleeding": {
           "delay": 0,
-          "duration": 300,
+          "duration": 180,
           "fadeOut": 0
         },
         "LightBleeding": {
           "delay": 0,
-          "duration": 300,
+          "duration": 180,
           "fadeOut": 0
         }
       }
     },
     "locales": {
       "en": {
-        "name": "X-Zagustin hemostatic drug injector",
-        "shortName": "X-Zagustin",
-        "description": "An improved Zagustin formula. Stops and prevents bleeding for 5 minutes. Has side effects."
+        "name": "Zagustin-X hemostatic drug injector",
+        "shortName": "Zagustin-X",
+        "description": "An improved Zagustin formula. Stops and prevents bleeding for 3 minutes. Has side effects."
       }
     },
     "fleaPriceRoubles": 92504,

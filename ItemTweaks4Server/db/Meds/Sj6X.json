@@ -1,0 +1,27 @@
+{
+  "99bdf12eeb8cff157a1ad9cf": {
+    "itemTplToClone": "5c0e531d86f7747fa23f4d42",
+    "parentId": "5448f3a64bdc2d60728b456a",
+    "handbookParentId": "5b47574386f77428ca22b33a",
+    "overrideProperties": {
+      "medUseTime": 2,
+      "StimulatorBuffs": "KraneBuffsSJ6X"
+    },
+    "locales": {
+      "en": {
+        "name": "SJ6-X TGLabs combat stimulant injector",
+        "shortName": "SJ6-X",
+        "description": "An improved SJ6 combat stimulant. Greatly increases stamina and its recovery for 7.5 minutes. Has side effects."
+      }
+    },
+    "fleaPriceRoubles": 208484,
+    "handbookPriceRoubles": 55900,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

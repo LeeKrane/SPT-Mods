@@ -1,33 +1,33 @@
 {
-  "746f40f23c943aa94650ab0b": {
-    "itemTplToClone": "5c10c8fd86f7743d7d706df3",
+  "3d8e6f5ae7ea46f17f0fa1a5": {
+    "itemTplToClone": "5c0e530286f7747fa1419862",
     "parentId": "5448f3a64bdc2d60728b456a",
     "handbookParentId": "5b47574386f77428ca22b33a",
     "overrideProperties": {
       "medUseTime": 2,
-      "StimulatorBuffs": "KraneBuffsXAdrenaline",
+      "StimulatorBuffs": "KraneBuffsPropitalX",
       "effects_damage": {
         "Contusion": {
           "delay": 0,
-          "duration": 120,
+          "duration": 450,
           "fadeOut": 0
         },
         "Pain": {
           "delay": 0,
-          "duration": 120,
+          "duration": 450,
           "fadeOut": 5
         }
       }
     },
     "locales": {
       "en": {
-        "name": "X-Adrenaline injector",
-        "shortName": "X-Adrenaline",
-        "description": "A refined adrenaline dose with strong short-term regeneration. Relieves pain and concussion and boosts endurance and strength."
+        "name": "Propital-X regenerative stimulant injector",
+        "shortName": "Propital-X",
+        "description": "An improved, long-acting Propital formula. Stimulates regeneration for 7.5 minutes and relieves pain and concussion. Has side effects."
       }
     },
-    "fleaPriceRoubles": 39812,
-    "handbookPriceRoubles": 62920,
+    "fleaPriceRoubles": 79456,
+    "handbookPriceRoubles": 42120,
     "addtoTraders": false,
     "addtoBots": false,
     "addtoStaticLootContainers": false,

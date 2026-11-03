@@ -123,13 +123,15 @@ internal static class Ids
     public const string TarkovskayaVodka = "5d40407c86f774318526545a";
 
     public const string Propital = "5c0e530286f7747fa1419862";
-    public const string XPropital = "3d8e6f5ae7ea46f17f0fa1a5";
+    public const string PropitalX = "3d8e6f5ae7ea46f17f0fa1a5";
     public const string Adrenaline = "5c10c8fd86f7743d7d706df3";
-    public const string XAdrenaline = "746f40f23c943aa94650ab0b";
+    public const string AdrenalineX = "746f40f23c943aa94650ab0b";
     public const string Zagustin = "5c0e533786f7747fa23f4d47";
-    public const string XZagustin = "3f5582d3b2ae5f2af6083599";
+    public const string ZagustinX = "3f5582d3b2ae5f2af6083599";
     public const string Surv12 = "5d02797c86f774203f38e30a";
-    public const string Surv16 = "6190dcad54cbff2ac9b7b8f4";
+    public const string Nightfall = "6190dcad54cbff2ac9b7b8f4";
+    public const string Sj6 = "5c0e531d86f7747fa23f4d42";
+    public const string Sj6X = "99bdf12eeb8cff157a1ad9cf";
     public const string Mule = "5ed51652f6c34d2cc26336a1";
     public const string Keta = "4f3445dcc79d0c4d911c6144";
 
@@ -230,26 +232,30 @@ internal static class Clones
             new(Ids.NatoQuartermaster, 1, ["1dc853e420eb2b1fbe1d0e5d"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
         ], IsVariant: false, AddToSpecialSlots: true, AddToSecureContainers: true),
         // Improved meds: fit wherever the source fits, but join none of its quests or bot pools. Therapist LL4 at 2x the source flea price.
-        new("X-Propital", "Propital", Ids.Propital, Ids.XPropital, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        new("Propital-X", "Propital", Ids.Propital, Ids.PropitalX, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
         [
             new(Ids.Therapist, 4, ["bf51445db5f2de0327519663"], 3, FixedPrice: 79456),
         ], IsVariant: false),
-        new("X-Adrenaline", "Adrenaline", Ids.Adrenaline, Ids.XAdrenaline, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        new("Adrenaline-X", "Adrenaline", Ids.Adrenaline, Ids.AdrenalineX, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
         [
             new(Ids.Therapist, 4, ["3b2b0117138b12bb04d0c6ac"], 3, FixedPrice: 39812),
         ], IsVariant: false),
-        new("X-Zagustin", "Zagustin", Ids.Zagustin, Ids.XZagustin, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        new("Zagustin-X", "Zagustin", Ids.Zagustin, Ids.ZagustinX, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
         [
             new(Ids.Therapist, 4, ["25bf892de7b0aa2d41571fe3"], 3, FixedPrice: 92504),
         ], IsVariant: false),
-        new("Surv16", "Surv12", Ids.Surv12, Ids.Surv16, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        new("Nightfall", "Surv12", Ids.Surv12, Ids.Nightfall, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
         [
             new(Ids.Therapist, 4, ["5354074733ed474a48c13c8a"], 2, FixedPrice: 132140),
         ], IsVariant: false),
-        // New anomalous stim with the ISB-Aishi KTE stim model (its bundle): a M.U.L.E. clone, created only with ISB-Aishi. 2x the SJ6 + M.U.L.E. flea prices.
+        new("SJ6-X", "SJ6", Ids.Sj6, Ids.Sj6X, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            new(Ids.Therapist, 4, ["608769b2b3816eac3739ba28"], 3, FixedPrice: 208484),
+        ], IsVariant: false),
+        // New anomalous stim with the ISB-Aishi KTE stim model (its bundle): a M.U.L.E. clone, created only with ISB-Aishi. 2x the SJ6 + M.U.L.E. flea prices, minus 35%.
         new("K.E.T.A.", "M.U.L.E.", Ids.Mule, Ids.Keta, "db/Keta", "ISB-Aishi", null, ShareMastery: false, ReplicateFilters: false,
         [
-            new(Ids.Therapist, 4, ["8ddee9eda2fec1723cdb5fd0"], 1, FixedPrice: 578434),
+            new(Ids.Therapist, 4, ["8ddee9eda2fec1723cdb5fd0"], 1, FixedPrice: 375982),
         ], IsVariant: false, RequiredType: "Aishi.ModMetadata"),
         // New case reusing the S I C C model (darkened by the client plugin): a 5x6 grid taking everything the SICC and the documents case take.
         // Fits wherever the SICC fits, joins none of its quests or bot pools. Flea only (2x the SICC flea price), no trader.
