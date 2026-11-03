@@ -5,6 +5,8 @@
 ## What
 Adds modified clones of existing items, plus new items that reuse an existing model (the spec-ops kit case, the spec-ops key case, the Redline dossier, K.E.T.A.; below), extra trader offers of other mods' items and a flea unblock. Weapon, magazine and scope clones (variants) keep the source's model, icon, description and slots, cost 2x the source in the handbook and on the flea, and are added to every quest condition, bot pool and mastery entry that lists the source (scanned at runtime, not hard-coded). The med clones and the Redline dossier share only the source's filters; the new items have their own names, descriptions and grids.
 
+NATO Quartermaster's own offers (everything it builds itself, not the offers added here) get unlimited stock: only its per-restock buy limits (its `*BuyLimit` config keys) cap purchases. Its stock config keys no longer matter. Skipped with a log line when the trader is absent.
+
 | Clone | Source | Changes vs source |
 |---|---|---|
 | "Knight's Armament Company MOD-SR-25 7.62x51 marksman rifle" | SR-25 | recoil up -5 (150), back -10 (346), ergonomics +16 (63), durability burn x0.5 (0.575) |

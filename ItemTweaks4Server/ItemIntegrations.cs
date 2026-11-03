@@ -34,6 +34,9 @@ public sealed class ItemIntegrations(
 {
     public Task OnLoadAsync(CancellationToken cancellationToken)
     {
+        // Before the offers below are added, so only NATO Quartermaster's own offers are touched.
+        Guard("NATO Quartermaster unlimited stock", MakeQuartermasterUnlimited);
+
         foreach (var def in Clones.All)
         {
             if (!templateTable.Items.ContainsKey(new MongoId(def.CloneTpl)))
@@ -88,6 +91,29 @@ public sealed class ItemIntegrations(
         var itemBlacklist = cache.Remove(tpl);
         var fleaBlacklist = ragfairConfig.Dynamic.Blacklist.Custom.Remove(tpl);
         logger.LogInformation("[ItemTweaks4Server] {Name} put on the flea (was on item blacklist: {Item}, flea blacklist: {Flea})", def.Name, itemBlacklist, fleaBlacklist);
+    }
+
+    /// <summary>
+    /// NATO Quartermaster builds every offer with UnlimitedCount = false and its config stock, which SPT 4.1.6 never refills
+    /// (see <see cref="AddOffer"/>). Its root offers become unlimited, so only its per-restock buy limit (BuyRestrictionMax,
+    /// from its config) caps purchases.
+    /// </summary>
+    private void MakeQuartermasterUnlimited()
+    {
+        if (!tradersTable.TryGetValue(new MongoId(Ids.NatoQuartermaster), out var trader) || trader.Assort == null)
+        {
+            logger.LogInformation("[ItemTweaks4Server] NATO Quartermaster not installed, unlimited stock skipped");
+            return;
+        }
+        var count = 0;
+        foreach (var root in trader.Assort.Items.Where(i => i.SlotId == "hideout"))
+        {
+            root.Upd ??= new Upd();
+            root.Upd.UnlimitedCount = true;
+            root.Upd.StackObjectsCount = 999999;
+            count++;
+        }
+        logger.LogInformation("[ItemTweaks4Server] NATO Quartermaster: {Count} offers set to unlimited stock", count);
     }
 
     private void Guard(string what, Action action)
