@@ -235,6 +235,86 @@ internal static class Enforcer
 }
 
 /// <summary>
+/// The client plugin hides the "original" tile on every map this mod registers, but nothing on the server may rely on that: a stale
+/// or other client could still post "original". On a shared-data pair installing "original" assigns the same objects and leaves
+/// MapVariants' _installedId (VariantRegistry.InstallKeyed, backport branch only) at "infected", so the next raid would be
+/// zombies on a vanilla pick. So for a map this mod manages, any answer that is not "infected" becomes "backport" before MapVariants
+/// sees it: in the two routes that take a choice (VariantRoutes.Record, ClaimTransit: the mutated request is what is stored, installed
+/// and answered to the client) and, as the catch-all every install passes through, VariantRegistry.Install. Patched by reflection
+/// so a different MapVariants layout only costs this guard (logged), never the mod.
+/// </summary>
+internal static class OriginalGuard
+{
+    private const string RoutesType = "MapVariants.Server.Variants.VariantRoutes";
+    private const string RegistryType = "MapVariants.Server.Variants.VariantRegistry";
+    private const string Backport = "backport"; // MapVariants' wire value
+
+    public static void Install(Harmony harmony, ILogger logger)
+    {
+        var patched = new List<string>();
+        try
+        {
+            var routes = Find(RoutesType);
+            foreach (var name in new[] { "Record", "ClaimTransit" })
+            {
+                var method = routes?.GetMethod(name, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                if (method is null || method.GetParameters().Length == 0) continue;
+                harmony.Patch(method, prefix: new HarmonyMethod(typeof(OriginalGuard), nameof(RequestPrefix)));
+                patched.Add(name);
+            }
+            var install = Find(RegistryType)?.GetMethod("Install", [typeof(string), typeof(string)]);
+            if (install is not null)
+            {
+                harmony.Patch(install, prefix: new HarmonyMethod(typeof(OriginalGuard), nameof(InstallPrefix)));
+                patched.Add("Install");
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError("{Tag} Could not guard against an 'original' pick: {Error}", State.Tag, e);
+        }
+        if (patched.Count == 3) logger.LogInformation("{Tag} 'original' picks on managed maps are served as the backport", State.Tag);
+        else logger.LogWarning("{Tag} 'original' guard incomplete (hooked: {Hooked}); MapVariants' layout is not the expected one", State.Tag, string.Join(",", patched));
+    }
+
+    private static Type? Find(string name) => AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name, false)).FirstOrDefault(t => t != null);
+
+    private static bool MustBeBackport(string? locationId, string? variant)
+    {
+        var id = locationId?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(id) || !State.Modes.ContainsKey(id)) return false;
+        var v = variant?.Trim().ToLowerInvariant();
+        return v != State.Infected && v != Backport; // MapVariant.Normalise folds every other word to "original"
+    }
+
+    // VariantChoiceRequest { LocationId, Variant }: first parameter of both routes.
+    private static void RequestPrefix(object __0)
+    {
+        try
+        {
+            var type = __0?.GetType();
+            var location = type?.GetProperty("LocationId");
+            var variant = type?.GetProperty("Variant");
+            if (location is null || variant is null || !variant.CanWrite) return;
+            var id = location.GetValue(__0) as string;
+            var was = variant.GetValue(__0) as string;
+            if (!MustBeBackport(id, was)) return;
+            variant.SetValue(__0, Backport);
+            State.Log?.LogInformation("{Tag} {Id}: '{Was}' requested, served as '{Backport}' (the original tile is never offered)", State.Tag, id, was, Backport);
+        }
+        catch (Exception e)
+        {
+            State.Log?.LogError("{Tag} Guarding a variant request failed: {Error}", State.Tag, e);
+        }
+    }
+
+    private static void InstallPrefix(string locationId, ref string variant)
+    {
+        if (MustBeBackport(locationId, variant)) variant = Backport;
+    }
+}
+
+/// <summary>
 /// Asks MapVariants' registry (by reflection, private layout) what happened to a location before this mod ran: whether a mod already
 /// replaced its data (MapVariants will discover it as a backport), or another provider already registered it. Returns Unknown
 /// when the layout is not the expected one, and the caller falls back to the known backport assemblies.
@@ -331,7 +411,9 @@ public sealed class InfectedRegistration(
             var enabled = LoadConfig();
             State.Bridge = new MapVariantsBridge(provider, logger);
 
-            new Harmony("krane.infectedvariantsserver").PatchAll(typeof(InfectedRegistration).Assembly);
+            var harmony = new Harmony("krane.infectedvariantsserver");
+            harmony.PatchAll(typeof(InfectedRegistration).Assembly);
+            OriginalGuard.Install(harmony, logger);
 
             var probe = new RegistryProbe(provider, logger);
             foreach (var spec in State.Specs)
@@ -542,7 +624,7 @@ internal static class GenerateLocationPatch
 
 /// <summary>
 /// After PPES (PostLoad + 5000000): clears infection and infected spawns from every table Base except the Factory pair, which
-/// shares one Base between classic and halloween2026 and is therefore enforced per raid only. Then sets the map-screen badges.
+/// shares one Base between classic and halloween2026 and is therefore enforced per raid only. Then zeroes the map-screen badges.
 /// </summary>
 [Injectable(TypePriority = OnLoadOrder.PostLoad + 6000000)]
 public sealed class InfectedSweep(ILogger<InfectedSweep> logger, LocationTable locationTable, GlobalTable globalTable) : IOnLoad
@@ -562,9 +644,9 @@ public sealed class InfectedSweep(ILogger<InfectedSweep> logger, LocationTable l
                 if (Enforcer.Apply(location!.Base!, id, State.IsInfected(id, variant)) is not null) cleaned++;
             }
 
-            var badges = SetBadges();
-            logger.LogInformation("{Tag} Sweep: {Count} location base(s) adjusted, badges {Badges}; infection {Percent:0.##}% on Factory halloween2026 and the infected variant of: {Maps}",
-                State.Tag, cleaned, badges, State.Percent, string.Join(",", State.Modes.Keys));
+            ClearBadges(globalTable);
+            logger.LogInformation("{Tag} Sweep: {Count} location base(s) adjusted, map-screen badges cleared; infection {Percent:0.##}% on Factory halloween2026 and the infected variant of: {Maps}",
+                State.Tag, cleaned, State.Percent, string.Join(",", State.Modes.Keys));
         }
         catch (Exception e)
         {
@@ -573,16 +655,13 @@ public sealed class InfectedSweep(ILogger<InfectedSweep> logger, LocationTable l
         return Task.CompletedTask;
     }
 
-    // Globals LocationInfection is only the map-screen badge; SeasonActivity InfectionHalloween stays as PPES / SPT set it.
-    private string SetBadges()
+    // Globals LocationInfection is the map-screen infection badge, one value per map. Infection here depends on the chosen variant, which
+    // the map screen does not know, so any non-zero badge would be wrong on the other variant: every badge is 0. SeasonActivity
+    // InfectionHalloween stays as PPES / SPT set it.
+    private static void ClearBadges(GlobalTable globalTable)
     {
         var map = globalTable.LocationInfection;
-        if (map is null) return "n/a";
-        foreach (var key in map.Keys.ToList())
-        {
-            var k = key.ToLowerInvariant();
-            map[key] = k == "factory4" || State.IsManaged(k) ? (int)Math.Round(State.Percent) : 0;
-        }
-        return string.Join(",", map.Where(p => p.Value > 0).Select(p => p.Key));
+        if (map is null) return;
+        foreach (var key in map.Keys.ToList()) map[key] = 0;
     }
 }
