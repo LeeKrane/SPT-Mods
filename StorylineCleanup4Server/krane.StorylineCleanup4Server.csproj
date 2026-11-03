@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>krane.StorylineCleanup4Server</AssemblyName>
+    <RootNamespace>StorylineCleanup4Server</RootNamespace>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)../ServerMod.props" />
+
+  <ItemGroup>
+    <None Include="config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
