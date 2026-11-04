@@ -7,6 +7,8 @@ Adds modified clones of existing items, plus new items that reuse an existing mo
 
 NATO Quartermaster's own offers (everything it builds itself, not the offers added here) get unlimited stock: only its per-restock buy limits (its `*BuyLimit` config keys) cap purchases. Its stock config keys no longer matter. Skipped with a log line when the trader is absent.
 
+**Ammo purchase limits**: every trader's single-round ammo offers (vanilla and modded traders, Fence excepted) get their per-restock purchase limit (`BuyRestrictionMax`) doubled until it is over 600 for penetration 40+ ammo and over 1000 for other ammo (e.g. 60 -> 960, 1000 -> 2000). Prices are unchanged. A finite stock below the new limit is raised to it. Offers without a limit, ammo packs, grenades, flares, the Zvezda flashbang and the 20x1mm disk are left alone. Runs after every trader is registered and after SVM's `CurrencyRestrictions` / `BarterRestrictions` multipliers, so it doubles their result. Not configurable.
+
 | Clone | Source | Changes vs source |
 |---|---|---|
 | "Knight's Armament Company MOD-SR-25 7.62x51 marksman rifle" | SR-25 | recoil up -5 (150), back -10 (346), ergonomics +16 (63), durability burn x0.5 (0.575) |
