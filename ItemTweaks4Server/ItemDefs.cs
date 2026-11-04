@@ -58,7 +58,8 @@ internal sealed record CloneDef(
 
 /// <summary>Extra trader offers of an existing item (not a clone). SourceMod adds the item; its absence skips it.</summary>
 /// <param name="Flea">Put the item on the flea (dynamic offers by simulated players) although its mod made it unsellable or blacklisted it.</param>
-internal sealed record ItemOfferDef(string Name, string ItemTpl, string? SourceMod, OfferDef[] Offers, bool Flea = false)
+/// <param name="FleaPrice">Flea price in roubles replacing the mod's own (only with Flea); null keeps it.</param>
+internal sealed record ItemOfferDef(string Name, string ItemTpl, string? SourceMod, OfferDef[] Offers, bool Flea = false, double? FleaPrice = null)
 {
     /// <summary>The item as a "clone" of itself, so the clone offer code can add it. Only FixedPrice or Barter offers: there is no source to price from.</summary>
     public CloneDef AsCloneDef => new(Name, Name, ItemTpl, ItemTpl, "", SourceMod, null, ShareMastery: false, ReplicateFilters: false, Offers, IsVariant: false);
@@ -137,6 +138,25 @@ internal static class Ids
 
     public const string ModSpearUpperBlack = "6892180ee9f15149b0677260";
     public const string Xm1184Ap = "699b54a97d3c1c9f69f616b6";
+
+    // WTT-Artem items it makes unsellable (explicitly, or inherited from an unsellable source).
+    public const string ArtemRaidBackpackBlack = "6673b1ac5cae0610f1079d71";
+    public const string ArtemRaidBackpackAlpine = "668bc5cd834c88e06b08b928";
+    public const string ArtemBumpHelmetBlack = "66326bfd46817c660d01512d";
+    public const string ArtemGpnvgWhite = "66326bfd46817c660d01512e";
+    public const string ArtemGpnvgOd = "66326bfd46817c660d015148";
+    public const string ArtemGpnvgBlack = "66326bfd46817c660d015146";
+    public const string ArtemRoninAlpine = "668bc5cd834c88e06b08b6a9";
+    public const string ArtemRoninBlack = "668bc5cd834c88e06b08b6aa";
+    public const string ArtemItemCase = "66326bfd46817c660d015123";
+    public const string ArtemCpcMulticam1 = "6673b1ac5cae0610f1079d7a";
+    public const string ArtemCpcAlpine = "6673b1ac5cae0610f1079d7b";
+    public const string ArtemCpcMulticam2 = "6673b1ac5cae0610f1079d7c";
+    public const string ArtemAirliteSpc = "66bf757f27d0b097db0ace36";
+    public const string ArtemLv119 = "66bf757f27d0b097db0ace38";
+    // More Cases Updated items that inherit an unsellable source (THICC weapon case, junk box).
+    public const string MoreCasesWeaponRack = "a3c2c001eb04d2cc82bd8983";
+    public const string MoreCasesToolbox = "9356c871d08f21db38e4c6ec";
 
     public const string Sicc = "5d235bb686f77443f4331278";
     public const string RedlineDossier = "34c6e81189d757ca98a05adb";
@@ -275,5 +295,26 @@ internal static class ItemOffers
         ]),
         // ISB-Aishi marks it unsellable and puts it on the item blacklist (WTT addtoItemBlacklist). Flea only, no trader.
         new("6.8x51mm SIG XM1184 AP", Ids.Xm1184Ap, "ISB-Aishi", [], Flea: true),
+
+        // WTT-Artem marks these unsellable. Flea only, at Artem's flea prices.
+        new("6Sh118 raid backpack (Black)", Ids.ArtemRaidBackpackBlack, "WTT-Artem", [], Flea: true),
+        new("6Sh118 raid backpack (Alpine)", Ids.ArtemRaidBackpackAlpine, "WTT-Artem", [], Flea: true),
+        new("Tactical Bump Helmet (Black)", Ids.ArtemBumpHelmetBlack, "WTT-Artem", [], Flea: true),
+        new("GPNVG-18 Night Vision goggles (White)", Ids.ArtemGpnvgWhite, "WTT-Artem", [], Flea: true),
+        new("GPNVG-18 Night Vision goggles (OD)", Ids.ArtemGpnvgOd, "WTT-Artem", [], Flea: true),
+        new("GPNVG-18 Night Vision goggles (Black)", Ids.ArtemGpnvgBlack, "WTT-Artem", [], Flea: true),
+        new("DevTac Ronin ballistic helmet (Alpine)", Ids.ArtemRoninAlpine, "WTT-Artem", [], Flea: true),
+        new("DevTac Ronin ballistic helmet (Black)", Ids.ArtemRoninBlack, "WTT-Artem", [], Flea: true),
+        new("Modernized Item Case", Ids.ArtemItemCase, "WTT-Artem", [], Flea: true),
+        new("AirLite SPC (Multicam)", Ids.ArtemAirliteSpc, "WTT-Artem", [], Flea: true),
+        new("LV-119 (Multicam)", Ids.ArtemLv119, "WTT-Artem", [], Flea: true),
+        // Black Knight rig clones: Artem's flea price is 300, so they use the source rig's flea price (119930).
+        new("Crye Precision CPC plate carrier (Multicam, 7a)", Ids.ArtemCpcMulticam1, "WTT-Artem", [], Flea: true, FleaPrice: 119930),
+        new("Crye Precision CPC plate carrier (Alpine)", Ids.ArtemCpcAlpine, "WTT-Artem", [], Flea: true, FleaPrice: 119930),
+        new("Crye Precision CPC plate carrier (Multicam, 7c)", Ids.ArtemCpcMulticam2, "WTT-Artem", [], Flea: true, FleaPrice: 119930),
+
+        // More Cases Updated: unsellable through their sources. Flea only, at the mod's flea prices.
+        new("Weapon Rack", Ids.MoreCasesWeaponRack, "More Cases Updated", [], Flea: true),
+        new("Toolbox", Ids.MoreCasesToolbox, "More Cases Updated", [], Flea: true),
     ];
 }

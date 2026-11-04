@@ -90,7 +90,9 @@ public sealed class ItemIntegrations(
             ?? throw new MissingFieldException(nameof(ItemFilterService), "ItemBlacklistCache");
         var itemBlacklist = cache.Remove(tpl);
         var fleaBlacklist = ragfairConfig.Dynamic.Blacklist.Custom.Remove(tpl);
-        logger.LogInformation("[ItemTweaks4Server] {Name} put on the flea (was on item blacklist: {Item}, flea blacklist: {Flea})", def.Name, itemBlacklist, fleaBlacklist);
+        if (def.FleaPrice is { } price) templateTable.Prices![tpl] = price;
+        logger.LogInformation("[ItemTweaks4Server] {Name} put on the flea (was on item blacklist: {Item}, flea blacklist: {Flea}, price: {Price})", def.Name, itemBlacklist, fleaBlacklist,
+            def.FleaPrice?.ToString() ?? "mod's own");
     }
 
     /// <summary>
