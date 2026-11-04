@@ -3,7 +3,8 @@
 //
 // One bool config entry per non-root handbook category, created once both the handbook (RagFair.UpdateSettings)
 // and the full locale (LocalizationManager.UpdateLocales) are loaded. Section = top-level category, key = path
-// below it. The ids of the enabled entries are posted to /krane/fleacategoryblock/set once per login
+// below it. Section "0. Global" (sorts first) holds the master switch and one entry per top-level category that
+// blocks the whole category. The ids of the enabled entries (none while the master switch is off) are posted to /krane/fleacategoryblock/set once per login
 // (after the settings exist) and on every change; the server saves them per profile. The server drops other
 // players' offers in and below those categories from this session's searches before paging; trader offers,
 // own offers and the category tree counts are untouched. After a change the cached offer pages are dropped
@@ -26,15 +27,17 @@ using SPT.Common.Http;
 
 namespace Krane.FleaCategoryBlock
 {
-    [BepInPlugin("krane.fleacategoryblock", "Krane's FleaCategoryBlock", "1.0.0")]
+    [BepInPlugin("krane.fleacategoryblock", "Krane's FleaCategoryBlock", "1.1.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
         internal static Plugin Instance;
 
         private const string Route = "/krane/fleacategoryblock/set";
+        private const string GlobalSection = "0. Global";
 
         private static readonly Dictionary<string, ConfigEntry<bool>> Entries = new Dictionary<string, ConfigEntry<bool>>();
+        private static ConfigEntry<bool> _enabled;
         private static readonly HashSet<string> Disabled = new HashSet<string>();
         private static RagFair _ragfair;
         private static string _profileId;
@@ -71,6 +74,22 @@ namespace Krane.FleaCategoryBlock
             HashSet<string> usedKeys = new HashSet<string>();
             bool saveOnSet = Instance.Config.SaveOnConfigSet;
             Instance.Config.SaveOnConfigSet = false;
+            _enabled = Instance.Config.Bind(GlobalSection, "Enabled", true,
+                new ConfigDescription("Master switch: off shows every flea offer again, whatever the settings below say.", null,
+                    new ConfigurationManagerAttributes { Order = 1 }));
+            _enabled.SettingChanged += (_, __) => Send(true);
+            foreach (HandbookData root in categories.Values.Where(c => string.IsNullOrEmpty(c.ParentId)).OrderBy(c => c.Order))
+            {
+                string key = Clean(Name(root));
+                string unique = key;
+                for (int n = 2; !usedKeys.Add(GlobalSection + "\n" + unique); n++)
+                {
+                    unique = key + " (" + n + ")";
+                }
+                ConfigEntry<bool> entry = Instance.Config.Bind(GlobalSection, unique, false);
+                Entries[root.Id] = entry;
+                entry.SettingChanged += (_, __) => Send(true);
+            }
             foreach (HandbookData category in categories.Values.OrderBy(c => c.Order))
             {
                 if (string.IsNullOrEmpty(category.ParentId))
@@ -117,7 +136,10 @@ namespace Krane.FleaCategoryBlock
                 return;
             }
             Disabled.Clear();
-            Disabled.UnionWith(Entries.Where(p => p.Value.Value).Select(p => p.Key));
+            if (_enabled.Value)
+            {
+                Disabled.UnionWith(Entries.Where(p => p.Value.Value).Select(p => p.Key));
+            }
             string json = "{\"categories\":[" + string.Join(",", Disabled.Select(id => "\"" + id + "\"")) + "]}";
             try
             {
@@ -171,6 +193,12 @@ namespace Krane.FleaCategoryBlock
             }
             return text.Trim();
         }
+    }
+
+    // Read by Configuration Manager through reflection (matched by type name).
+    internal sealed class ConfigurationManagerAttributes
+    {
+        public int? Order;
     }
 
     internal static class Patches
