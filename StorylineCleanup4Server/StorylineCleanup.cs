@@ -17,6 +17,9 @@ public sealed record CleanupConfig
 
     [JsonPropertyName("RemapQuestIds")]
     public Dictionary<string, string>? RemapQuestIds { get; init; }
+
+    [JsonPropertyName("DisableStoryMapLock")]
+    public bool DisableStoryMapLock { get; init; }
 }
 
 /// <summary>

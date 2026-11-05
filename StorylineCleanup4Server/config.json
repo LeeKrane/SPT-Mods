@@ -20,5 +20,6 @@
   ],
   "RemapQuestIds": {
     "68cc07e96a6359b02109da18": "6a8f4d5e90206485fa1d2d5a"
-  }
+  },
+  "DisableStoryMapLock": false
 }

@@ -7,6 +7,7 @@
   <Import Project="$(MSBuildThisFileDirectory)../ServerMod.props" />
 
   <ItemGroup>
+    <Reference Include="SPTarkov.Reflection"><HintPath>$(SptRuntime)/SPTarkov.Reflection.dll</HintPath><Private>false</Private></Reference>
     <None Include="config.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
