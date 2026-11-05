@@ -8,6 +8,8 @@ SPT plugin path: `~/Games/spt/drive_c/SPT/BepInEx/plugins`
 
 Server mods (own `Directory.Build.props`, net10) are named with a `4Server` suffix (e.g. `FleaOfferGuard4Server`) and run on taragarmr, not locally. Deploy with `scripts/deploy-server-mod.sh <Name>` (keeps the remote `config.json`). Restart with `scripts/restart-all.sh` only when explicitly told to.
 
+taragarmr also runs a second SPT server with the Vagabond mod: `~/spt-server-vagabond` (TCP 6970, unit `spt-server-vagabond`), a btrfs reflink copy of the main one with its own profiles, and headless 2 as its raid host. Deploy a server mod there with `SPT_SERVER_DIR=spt-server-vagabond scripts/deploy-server-mod.sh <Name>`. The local client for it is the reflinked copy `C:\SPT-Vagabond`, started with `spt-vagabond`; symlinked krane plugins are shared with the main install.
+
 NEVER restart anything yourself (server, headless clients, services, game). Only restart when the user explicitly tells you to.
 
 Never copy a built DLL into the plugin path. Symlink it, so a rebuild goes live without a copy step:

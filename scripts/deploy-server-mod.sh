@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Push a built server mod (<Name>/out/) to taragarmr's SPT mods dir as krane-<Name>. Builds and
-# restarts nothing (run scripts/restart-all.sh after). The remote config.json is never overwritten;
+# restarts nothing (run scripts/restart-all.sh after). SPT_SERVER_DIR=spt-server-vagabond
+# targets the Vagabond server instead of the main one. The remote config.json is never overwritten;
 # the built one is copied only if absent. A remote state/ dir (data a mod saves at runtime) is kept.
 set -euo pipefail
 
 host=${SPT_HOST:-taragarmr}
 name=${1:?usage: deploy-server-mod.sh <Name>}
 out="$(cd "$(dirname "$0")/.." && pwd)/$name/out"
-dest="spt-server/SPT_Runtime/user/mods/krane-$name"
+dest="${SPT_SERVER_DIR:-spt-server}/SPT_Runtime/user/mods/krane-$name"
 
 [ -d "$out" ] || { echo "No build output: $out" >&2; exit 1; }
 ls "$out"/krane.*.dll >/dev/null 2>&1 || { echo "No krane.*.dll in $out" >&2; exit 1; }

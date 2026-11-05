@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Restart Fika headless client 1 on taragarmr; the SPT server and headless 2 keep running.
+# Restart Fika headless client 1 (main server's raid host) on taragarmr; both SPT servers and
+# headless 2 keep running.
 set -euo pipefail
 
 host=${SPT_HOST:-taragarmr}

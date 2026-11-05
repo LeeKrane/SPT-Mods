@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Restart Fika headless client 2 on taragarmr; the SPT server and headless 1 keep running.
+# Restart Fika headless client 2 (Vagabond server's raid host) on taragarmr; both SPT servers
+# and headless 1 keep running.
 set -euo pipefail
 
 host=${SPT_HOST:-taragarmr}
