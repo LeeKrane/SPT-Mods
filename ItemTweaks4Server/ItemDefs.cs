@@ -2,7 +2,7 @@ namespace ItemTweaks4Server;
 
 /// <summary>One trader offer of a clone. Prices are roubles unless Currency says otherwise; the offer is 1 root item (the full default build when the clone has a preset).</summary>
 /// <param name="AssortIds">Trader assort ids, in preset item order (root first); one id for a clone without preset.</param>
-/// <param name="Limit">Purchases per profile per restock (BuyRestrictionMax).</param>
+/// <param name="Limit">Purchases per profile per restock (BuyRestrictionMax); 0 for no limit.</param>
 /// <param name="FixedPrice">Price as is, in Currency. Otherwise 2x the price of the source item at OwnPriceTrader.</param>
 /// <param name="FallbackPriceTrader">Used when OwnPriceTrader has no source offer: 2x that trader's source price times FallbackFactor.</param>
 /// <param name="Optional">The trader is a soft dependency: skipped with a log line when absent.</param>
@@ -80,6 +80,8 @@ internal static class Ids
     public const string Jaeger = "5c0647fdd443bc2504c2d371";
     public const string Mechanic = "5a7c2eca46aef81a7ca2145d";
     public const string NatoQuartermaster = "bb371fed0e82b224f2d82c0d";
+    public const string Ref = "6617beeaa9cfa777ca915b7c";
+    public const string LegaMedal = "6656560053eaaa7a23349c86";
     public const string Therapist = "54cb57776803fa99248b456e";
 
     public static readonly IReadOnlyDictionary<string, string> TraderNames = new Dictionary<string, string>
@@ -90,6 +92,7 @@ internal static class Ids
         [Mechanic] = "Mechanic",
         [Therapist] = "Therapist",
         [NatoQuartermaster] = "NATO Quartermaster",
+        [Ref] = "Ref",
     };
 
     public const string Aek973 = "686093d590c3dce07984c38a";
@@ -245,11 +248,14 @@ internal static class Clones
         new("Spec-ops kit case", "Dogtag case", Ids.DogtagCase, Ids.SpecOpsCase, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: false,
         [
             new(Ids.NatoQuartermaster, 1, ["2ca535e7b954eb436c4d78a6"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
+            // Ref LL1: 10% of NATO Quartermaster's price (6900 USD, ~835k RUB), as 1 Lega medal (900k RUB handbook).
+            new(Ids.Ref, 1, ["c7f6db482042ca55b44d83bd"], 1, Barter: (Ids.LegaMedal, 1)),
         ], IsVariant: false, AddToSpecialSlots: true),
         // New item reusing the Gingy keychain model. Placed in special slots and in every secure container that takes the key tool.
         new("Spec-ops key case", "Gingy keychain", Ids.GingyKeychain, Ids.KeyCase, "db/KeyCase", null, null, ShareMastery: false, ReplicateFilters: false,
         [
             new(Ids.NatoQuartermaster, 1, ["1dc853e420eb2b1fbe1d0e5d"], 1, FixedPrice: 69000, Optional: true, Currency: Ids.Usd),
+            new(Ids.Ref, 1, ["48385b39a0679eb0ac0136f1"], 1, Barter: (Ids.LegaMedal, 1)),
         ], IsVariant: false, AddToSpecialSlots: true, AddToSecureContainers: true),
         // Improved meds: fit wherever the source fits, but join none of its quests or bot pools. Therapist LL4 at 2x the source flea price.
         new("Propital-X", "Propital", Ids.Propital, Ids.PropitalX, "db/Meds", null, null, ShareMastery: false, ReplicateFilters: true,
@@ -288,6 +294,9 @@ internal static class ItemOffers
 {
     public static readonly ItemOfferDef[] All =
     [
+        // Ref LL1 sells money like Skier (EUR) and Peacekeeper (USD), at their LL1 prices, without a buy limit.
+        new("Euros", Ids.Eur, null, [new(Ids.Ref, 1, ["7b16ddb3b9dbc2e1998aedb3"], 0, FixedPrice: 158)]),
+        new("Dollars", Ids.Usd, null, [new(Ids.Ref, 1, ["781139ef0c83861c64b46655"], 0, FixedPrice: 136)]),
         // Same price as Aishi's own offer (LL4, 51 USD, 1 per restock), 3 per restock.
         new("Modified MCX-SPEAR 6.8x51 upper receiver (Black)", Ids.ModSpearUpperBlack, "ISB-Aishi",
         [

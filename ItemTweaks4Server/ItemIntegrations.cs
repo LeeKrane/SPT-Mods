@@ -459,7 +459,7 @@ public sealed class ItemIntegrations(
                 ParentId = isRoot ? "hideout" : parentAssortId,
                 SlotId = isRoot ? "hideout" : src.SlotId,
                 Upd = isRoot
-                    ? new Upd { UnlimitedCount = true, StackObjectsCount = 999999, BuyRestrictionMax = offer.Limit, BuyRestrictionCurrent = 0, FireMode = src.Upd?.FireMode }
+                    ? new Upd { UnlimitedCount = true, StackObjectsCount = 999999, BuyRestrictionMax = offer.Limit > 0 ? offer.Limit : null, BuyRestrictionCurrent = offer.Limit > 0 ? 0 : null, FireMode = src.Upd?.FireMode }
                     : null,
             });
         }
