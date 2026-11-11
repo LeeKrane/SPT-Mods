@@ -1,12 +1,13 @@
 # Krane's Item Tweaks & Additions (ItemTweaks)
 
-**Requires:** SPT 4.1.6, Fika 2.4.6 (soft dependency). Soft dependency on the server mod ItemTweaks4Server (adds the case items, the Redline dossier, the PS-321 scope, the med clones and the .300 WM CBJ); without it only the repair-in-raid feature does anything. Install on every client and on the headless client.
+**Requires:** SPT 4.1.6, Fika 2.4.6 (soft dependency). Soft dependency on the server mod ItemTweaks4Server (adds the case items, the Redline dossier, the MediPouch, the PS-321 scope, the med clones and the .300 WM CBJ); without it only the repair-in-raid feature does anything. Install on every client and on the headless client.
 
 ## What
 Client side of the server-mod cases:
 - Spec-ops kit case (template `f39e1020a6eb538f07653b87`, a Dogtag case clone, 1x1, one 3x6 grid): model and inventory icon are light gray; the original Dogtag case is unaffected.
 - Spec-ops key case (template `c40d4da0b8d5434d00fffb4c`, a Gingy keychain clone, 1x1, one 4x4 grid that takes keys, keycards and a few related items; its contraband key `67449b6c89d5e1ddc603f504` is item_barter_other_contraband_key, a barter item outside the Key category that the key tool accepts): model and icon are the keychain darkened a little; the original keychain is unaffected.
 - Redline dossier (template `34c6e81189d757ca98a05adb`, an S I C C pouch clone): model and icon are the pouch darkened (multiply tint, own setting); the original SICC is unaffected. No weight change.
+- MediPouch (template `8fd4a50de9a76655273833d8`, uses the S I C C pouch model): model and icon get the albedo replaced by a flat mid gray (own setting); the original SICC is unaffected. No weight change.
 - Everything stored in either spec-ops case is lighter (90% by default, own setting per case) in all weight calculations (player weight, overweight, stamina, tooltips). The cases' own weight is unchanged.
 
 - Valday PS-321 1/5x scope (template `41a2f314a21e64a4862d6bd1`, a PS-320 clone with the same model): while aiming through it, the zoomed mode is 5x instead of 6x, the camera sits 2 cm closer to the eyepiece (the scope picture fills more of the view) and the lens shadow when the eye leaves the axis (sway, movement) is smaller. Hard-coded, no settings. Local view only; other players see a normal PS-320 model.
@@ -47,5 +48,6 @@ Fika: no network changes; repair is local. Known limitation: other players (and 
 | Look / Flat Color | `true` | Spec-ops kit case: replace the albedo texture with a flat color. Off: multiply the texture by the color only (stays dark). Icons already cached keep the old look. |
 | Look / Key Case Color | gray (0.75) | Spec-ops key case: the keychain model and icon are multiplied by this color (darkens). Icons already cached keep the old look. |
 | Look / Redline Dossier Color | gray (0.5) | Redline dossier: the S I C C pouch model and icon are multiplied by this color (darkens). Icons already cached keep the old look. |
+| Look / MediPouch Color | gray (0.55) | MediPouch: flat color replacing the S I C C pouch albedo (model and icon), so it reads gray. Icons already cached keep the old look. |
 | Repair / Allow Repair Kits In Raid | `true` | Allow using armor/weapon repair kits in raid (drag onto item or context menu Repair, instant). Off: vanilla, no repair in raid. |
 | Repair / In-Raid Wear Percent | `10` | Max durability lost by an in-raid kit repair, in percent of the normal kit repair loss (0 to 100; 100 = as a stash kit repair, 0 = none). Weapons, armor and plates. |

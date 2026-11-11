@@ -174,6 +174,9 @@ internal static class Ids
 
     public const string KappaDesecrated = "676008db84e242067d0dc4c9";
     public const string SecureContainerOmega = "22776b1c216596a5e40a8e2c";
+
+    public const string MedCase = "5aafbcd986f7745e590fff23";
+    public const string MediPouch = "8fd4a50de9a76655273833d8";
 }
 
 internal static class Clones
@@ -306,6 +309,11 @@ internal static class Clones
         // Only obtainable as a prestige 4+ reward (PrestigeRewards): no trader, flea, loot or bots.
         new("Secure container Omega", "Secure container Kappa (Desecrated)", Ids.KappaDesecrated, Ids.SecureContainerOmega, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
             [], IsVariant: false),
+        // Documents bag look, 2x1, one 3x3 grid with the Med case's filters. Fits wherever the Med case fits. Flea (dynamic offers) and Therapist LL2 at the handbook price.
+        new("MediPouch", "Med case", Ids.MedCase, Ids.MediPouch, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            new(Ids.Therapist, 2, ["317dfd4174fc69d964f3ff36"], 1, FixedPrice: 67250),
+        ], IsVariant: false),
     ];
 }
 

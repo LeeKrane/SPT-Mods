@@ -1,0 +1,63 @@
+{
+  "8fd4a50de9a76655273833d8": {
+    "itemTplToClone": "5aafbcd986f7745e590fff23",
+    "parentId": "5795f317245977243854e041",
+    "handbookParentId": "5b5f6fa186f77409407a7eb7",
+    "overrideProperties": {
+      "UsePrefab": {
+        "path": "",
+        "rcid": ""
+      },
+      "Prefab": {
+        "path": "assets/content/items/containers/item_container_lopouch/item_container_lopouch.bundle",
+        "rcid": ""
+      },
+      "Width": 2,
+      "Height": 1,
+      "Weight": 1.0,
+      "ItemSound": "container_pouch",
+      "CanSellOnRagfair": true,
+      "Grids": [
+        {
+          "_name": "main",
+          "_id": "0e2b4fc3220ec5f66ee1f327",
+          "_parent": "8fd4a50de9a76655273833d8",
+          "_props": {
+            "filters": [
+              {
+                "Filter": [
+                  "57864c8c245977548867e7f1",
+                  "543be5664bdc2dd4348b4569"
+                ],
+                "ExcludedFilter": []
+              }
+            ],
+            "cellsH": 3,
+            "cellsV": 3,
+            "minCount": 0,
+            "maxCount": 0,
+            "maxWeight": 0,
+            "isSortingTable": false
+          },
+          "_proto": "55d329c24bdc2d892f8b4567"
+        }
+      ]
+    },
+    "locales": {
+      "en": {
+        "name": "MediPouch",
+        "shortName": "MedPch",
+        "description": "A compact pouch for medical supplies. Holds a 3x3 area of meds, in a gray pouch."
+      }
+    },
+    "fleaPriceRoubles": 129800,
+    "handbookPriceRoubles": 67250,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}
