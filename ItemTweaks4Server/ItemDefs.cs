@@ -161,6 +161,10 @@ internal static class Ids
     public const string MoreCasesWeaponRack = "a3c2c001eb04d2cc82bd8983";
     public const string MoreCasesToolbox = "9356c871d08f21db38e4c6ec";
 
+    public const string TeamWendyExfil = "5e00c1ad86f774747333222c";
+    public const string ExfilBdBlackCamo = "bf1a3157a6706c4a2e0d7c9e";
+    public const string ExfilBdBlackCamoPreset = "1965bf04400dbefd19d2786d";
+
     public const string Sicc = "5d235bb686f77443f4331278";
     public const string RedlineDossier = "34c6e81189d757ca98a05adb";
 }
@@ -287,6 +291,10 @@ internal static class Clones
         // Fits wherever the SICC fits, joins none of its quests or bot pools. Flea only (2x the SICC flea price), no trader.
         new("Redline dossier", "S I C C organizational pouch", Ids.Sicc, Ids.RedlineDossier, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
             [], IsVariant: false),
+        // ISB-Aishi's White Tusk Arctic EXFIL helmet (modified class 5 inserts) with the Black Camo model. Cloned from the vanilla EXFIL helmet plus the
+        // White Tusk overrides, as Aishi's own items do not exist yet at this point. Fits wherever the vanilla helmet fits. Flea only (the White Tusk price).
+        new("EXFIL helmet (BD Black Camo)", "Team Wendy EXFIL Ballistic Helmet", Ids.TeamWendyExfil, Ids.ExfilBdBlackCamo, "db/ExfilHelmet", "ISB-Aishi",
+            Ids.ExfilBdBlackCamoPreset, ShareMastery: false, ReplicateFilters: true, [], IsVariant: false, RequiredType: "Aishi.ModMetadata"),
     ];
 }
 

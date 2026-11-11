@@ -1,0 +1,135 @@
+{
+  "bf1a3157a6706c4a2e0d7c9e": {
+    "itemTplToClone": "5e00c1ad86f774747333222c",
+    "parentId": "5a341c4086f77401f2541505",
+    "handbookParentId": "5b47574386f77428ca22b330",
+    "overrideProperties": {
+      "Prefab": {
+        "path": "equipment/item_equipment_helmet_team_wendy_exfil_blackcamo_aishi.bundle",
+        "rcid": ""
+      },
+      "BackgroundColor": "yellow",
+      "CanSellOnRagfair": true,
+      "CanRequireOnRagfair": true,
+      "Slots": [
+        {
+          "_id": "5e00c1ad86f774747333222e",
+          "_mergeSlotWithChildren": false,
+          "_name": "mod_equipment_000",
+          "_parent": "bf1a3157a6706c4a2e0d7c9e",
+          "_props": {
+            "filters": [
+              {
+                "Filter": ["5e00cfa786f77469dc6e5685", "5e01f31d86f77465cf261343", "66b5f69ea7f72d197e70bcdb", "66b5f6a28ca68c6461709ed8"],
+                "Shift": 0
+              }
+            ]
+          },
+          "_proto": "55d30c4c4bdc2db4468b457e",
+          "_required": false
+        },
+        {
+          "_id": "5e00c1ad86f774747333222f",
+          "_mergeSlotWithChildren": false,
+          "_name": "mod_nvg",
+          "_parent": "bf1a3157a6706c4a2e0d7c9e",
+          "_props": {
+            "filters": [
+              {
+                "Filter": ["5c0558060db834001b735271", "5a16b8a9fcdbcb00165aa6ca"],
+                "Shift": 0
+              }
+            ]
+          },
+          "_proto": "55d30c4c4bdc2db4468b457e",
+          "_required": false
+        },
+        {
+          "_id": "6551fe9fffab45c12d0fc4d8",
+          "_mergeSlotWithChildren": true,
+          "_name": "helmet_top",
+          "_parent": "bf1a3157a6706c4a2e0d7c9e",
+          "_props": {
+            "filters": [
+              {
+                "Filter": ["7fde456712f75876aac4bd41", "6551fec55d0cf82e51014288"],
+                "Plate": "7fde456712f75876aac4bd41",
+                "armorColliders": ["ParietalHead"],
+                "armorPlateColliders": [],
+                "bluntDamageReduceFromSoftArmor": false,
+                "locked": true
+              }
+            ]
+          },
+          "_proto": "64479fdf9731c8fadc0642c1",
+          "_required": true
+        },
+        {
+          "_id": "655201ff3b23749ada09a768",
+          "_mergeSlotWithChildren": true,
+          "_name": "helmet_back",
+          "_parent": "bf1a3157a6706c4a2e0d7c9e",
+          "_props": {
+            "filters": [
+              {
+                "Filter": ["7400edf574275ab892637d76", "655200ba0ef76cf7be09d528"],
+                "Plate": "7400edf574275ab892637d76",
+                "armorColliders": ["BackHead"],
+                "armorPlateColliders": [],
+                "bluntDamageReduceFromSoftArmor": false,
+                "locked": true
+              }
+            ]
+          },
+          "_proto": "64479fdf9731c8fadc0642c1",
+          "_required": true
+        }
+      ]
+    },
+    "locales": {
+      "en": {
+        "name": "Team Wendy EXFIL Ballistic Helmet (BD Black Camo)",
+        "shortName": "EXFIL",
+        "description": "One of the most recent tactical ballistic helmets with extensive customization capabilities. The EXFIL LTP (Lightweight, Tactical, Polymer) bump helmet provides impact protection for maritime environments and a stable, comfortable platform for mounting night vision and other accessories. The built-in NVG shroud utilizes an integrated Wilcox machined aluminum shroud insert. BD Black Camo version."
+      }
+    },
+    "fleaPriceRoubles": 21949,
+    "handbookPriceRoubles": 21949,
+    "addtoInventorySlots": ["HeadWear"],
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoItemBlacklist": false,
+    "addtoStaticLootContainers": false,
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": true,
+    "weaponPresets": [
+      {
+        "_id": "1965bf04400dbefd19d2786d",
+        "_type": "Preset",
+        "_changeWeaponName": false,
+        "_name": "Team Wendy EXFIL Ballistic Helmet (BD Black Camo)",
+        "_parent": "ba895d3e3e611eda9c8455d0",
+        "_encyclopedia": "bf1a3157a6706c4a2e0d7c9e",
+        "_items": [
+          {
+            "_id": "ba895d3e3e611eda9c8455d0",
+            "_tpl": "bf1a3157a6706c4a2e0d7c9e"
+          },
+          {
+            "_id": "4c010888246c952ab12a7eca",
+            "_tpl": "7fde456712f75876aac4bd41",
+            "parentId": "ba895d3e3e611eda9c8455d0",
+            "slotId": "helmet_top"
+          },
+          {
+            "_id": "200994ee3f1a3dd9609c6a19",
+            "_tpl": "7400edf574275ab892637d76",
+            "parentId": "ba895d3e3e611eda9c8455d0",
+            "slotId": "helmet_back"
+          }
+        ]
+      }
+    ]
+  }
+}
