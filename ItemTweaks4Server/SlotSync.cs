@@ -2,20 +2,19 @@ using Microsoft.Extensions.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Tables;
-using SPTarkov.Server.Core.Utils.Cloners;
 
 namespace ItemTweaks4Server;
 
 /// <summary>
-/// Gives a clone the final slots of its source, after every other mod changed them. ISB-Aishi's White Tusk EXFIL helmet shares its
-/// slot objects with the vanilla EXFIL helmet, so later edits of the vanilla helmet reach it: WolfiksHeavyTrooperMasks adds its
-/// heavy trooper masks to the mod_nvg slot, another mod adds a mod_equipment_002 slot. Our clone is a deep copy made at
-/// Preload + 10, before those edits, so it has neither. Runs after PostLoad; slot ids stay the source's, parents point to the clone.
+/// Makes a clone share its source's slot list. ISB-Aishi's White Tusk EXFIL helmet shares its slot list with the vanilla EXFIL helmet,
+/// so edits other mods make to the vanilla helmet reach it: WolfiksHeavyTrooperMasks' heavy trooper masks in mod_nvg and an extra
+/// mod_equipment_002 slot. These arrive after every IOnLoad step (White Tusk still has 4 slots at PostLoad + 100), so copying the slots
+/// at any load stage misses them; sharing the same list object picks them up whenever they are added. Slot parents stay the vanilla
+/// helmet's, as on White Tusk.
 /// </summary>
 [Injectable(TypePriority = OnLoadOrder.PostLoad + 100)]
-public sealed class SlotSync(ILogger<SlotSync> logger, TemplateTable templateTable, ICloner cloner) : IOnLoad
+public sealed class SlotSync(ILogger<SlotSync> logger, TemplateTable templateTable) : IOnLoad
 {
     // (clone, source, name)
     private static readonly (string Clone, string Source, string Name)[] Pairs =
@@ -32,14 +31,12 @@ public sealed class SlotSync(ILogger<SlotSync> logger, TemplateTable templateTab
                 if (!templateTable.Items.TryGetValue(new MongoId(cloneTpl), out var clone) || clone.Properties == null) continue;
                 if (!templateTable.Items.TryGetValue(new MongoId(sourceTpl), out var source) || source.Properties?.Slots == null) continue;
 
-                var slots = source.Properties.Slots.Select(s => cloner.Clone(s)!).ToList();
-                foreach (var slot in slots) slot.Parent = clone.Id;
-                clone.Properties.Slots = slots;
-                logger.LogInformation("[ItemTweaks4Server] {Name}: slots synced from its source ({Count} slots)", name, slots.Count);
+                clone.Properties.Slots = source.Properties.Slots;
+                logger.LogInformation("[ItemTweaks4Server] {Name}: shares its source's slot list", name);
             }
             catch (Exception e)
             {
-                logger.LogError("[ItemTweaks4Server] {Name} slot sync failed: {Error}", name, e);
+                logger.LogError("[ItemTweaks4Server] {Name} slot sharing failed: {Error}", name, e);
             }
         }
         return Task.CompletedTask;
