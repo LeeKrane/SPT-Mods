@@ -1,0 +1,27 @@
+{
+  "88925d916fc520bcf6f6b897": {
+    "itemTplToClone": "55d482194bdc2d1d4e8b456b",
+    "parentId": "5448bc234bdc2d3c308b4569",
+    "handbookParentId": "5b5f754a86f774094242f19b",
+    "overrideProperties": {
+      "Ergonomics": -3,
+      "CanSellOnRagfair": true
+    },
+    "locales": {
+      "en": {
+        "name": "AK-74 5.45x39 MOD-6L31 60-round magazine",
+        "shortName": "MOD-6L31 5.45",
+        "description": "A 60-round 5.45x39 quad-stack polymer Izhmash 6L31 magazine for AK-74 and compatible systems. Produced in a small batch, never serialized."
+      }
+    },
+    "fleaPriceRoubles": 49710,
+    "handbookPriceRoubles": 29310,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

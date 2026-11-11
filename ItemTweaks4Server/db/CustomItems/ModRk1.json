@@ -1,0 +1,27 @@
+{
+  "3e4ec7791f17e1ba9a349383": {
+    "itemTplToClone": "5c1cd46f2e22164bef5cfedb",
+    "parentId": "55818af64bdc2d5b648b4570",
+    "handbookParentId": "5b5f71de86f774093f2ecf13",
+    "overrideProperties": {
+      "Ergonomics": 7,
+      "CanSellOnRagfair": true
+    },
+    "locales": {
+      "en": {
+        "name": "Zenit RK-1M tactical foregrip on B-25U mount",
+        "shortName": "B-25U RK-1M",
+        "description": "The RK-1 foregrip can be installed on the lower part of handguards with a Weaver rail. It provides better operational control of a weapon during firing. Installed on B-25U mount for easier handling of LMGs. Manufactured by Zenit."
+      }
+    },
+    "fleaPriceRoubles": 122812,
+    "handbookPriceRoubles": 30224,
+    "addtoTraders": false,
+    "addtoBots": false,
+    "addtoStaticLootContainers": false,
+    "addtoInventorySlots": [],
+    "addtoModSlots": false,
+    "masteries": false,
+    "addWeaponPreset": false
+  }
+}

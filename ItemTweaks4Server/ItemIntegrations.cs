@@ -37,6 +37,8 @@ public sealed class ItemIntegrations(
         // Before the offers below are added, so only NATO Quartermaster's own offers are touched.
         Guard("NATO Quartermaster unlimited stock", MakeQuartermasterUnlimited);
         Guard("Special SLX68 suppressor stats", AlignSpecialSlx68);
+        // Before the clone loop, so the filter replication below also puts MOD-6L31 into the NL545 magazine slots.
+        Guard("NL545 6L31 magazines", AddMagazinesToNl545);
 
         foreach (var def in Clones.All)
         {
@@ -141,6 +143,28 @@ public sealed class ItemIntegrations(
         sp.Velocity = regular.Velocity;
         logger.LogInformation("[ItemTweaks4Server] Special SLX68 suppressor aligned with the regular one (ergo {Ergo}, burn {Burn}, heat {Heat}, recoil {Recoil})",
             sp.Ergonomics, sp.DurabilityBurnModificator, sp.HeatFactor, sp.Recoil);
+    }
+
+    /// <summary>
+    /// The NL545 (both variants, WTT-ContentBackport) takes only 15 AK-74 magazines, none of them the 60-round 6L31. Adds the 6L31 and
+    /// ISB-Aishi's Tape one to the rifles' mod_magazine filter (the receivers have no magazine slot). Must run before the clone filters
+    /// are replicated (<see cref="AddToFilters"/>), so MOD-6L31 lands there too.
+    /// </summary>
+    private void AddMagazinesToNl545()
+    {
+        var mags = new[] { Ids.Mag6L31, Ids.Mag6L31Tape }.Select(t => new MongoId(t)).Where(templateTable.Items.ContainsKey).ToList();
+        foreach (var rifle in new[] { Ids.Nl545Gp, Ids.Nl545Di })
+        {
+            if (!templateTable.Items.TryGetValue(new MongoId(rifle), out var item))
+            {
+                logger.LogInformation("[ItemTweaks4Server] NL545 {Id} not found, 6L31 magazines not added", rifle);
+                continue;
+            }
+            var filter = item.Properties?.Slots?.FirstOrDefault(s => s.Name == "mod_magazine")?.Properties?.Filters?.FirstOrDefault()?.Filter
+                ?? throw new InvalidOperationException($"NL545 {rifle} has no mod_magazine filter");
+            var added = mags.Count(filter.Add);
+            logger.LogInformation("[ItemTweaks4Server] NL545 {Id}: {Count} 6L31 magazine(s) added to its magazine slot", rifle, added);
+        }
     }
 
     private void Guard(string what, Action action)

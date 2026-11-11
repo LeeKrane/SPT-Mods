@@ -83,6 +83,7 @@ internal static class Ids
     public const string Ref = "6617beeaa9cfa777ca915b7c";
     public const string LegaMedal = "6656560053eaaa7a23349c86";
     public const string Therapist = "54cb57776803fa99248b456e";
+    public const string Skier = "58330581ace78e27b8b10cee";
 
     public static readonly IReadOnlyDictionary<string, string> TraderNames = new Dictionary<string, string>
     {
@@ -91,6 +92,7 @@ internal static class Ids
         [Jaeger] = "Jaeger",
         [Mechanic] = "Mechanic",
         [Therapist] = "Therapist",
+        [Skier] = "Skier",
         [NatoQuartermaster] = "NATO Quartermaster",
         [Ref] = "Ref",
     };
@@ -112,6 +114,19 @@ internal static class Ids
 
     public const string X47 = "5cfe8010d7ad1a59283b14c6";
     public const string ModX47 = "6ab1ba9faeb1d2b546b88b50";
+
+    public const string Mag6L31 = "55d482194bdc2d1d4e8b456b";
+    public const string Mag6L31Tape = "093565ad01cd57a2a54c8303";
+    public const string Mod6L31 = "88925d916fc520bcf6f6b897";
+    public const string Rk1 = "5c1cd46f2e22164bef5cfedb";
+    public const string ModRk1 = "3e4ec7791f17e1ba9a349383";
+
+    // NL545 (WTT-ContentBackport) rifles, the SAI JailBrake muzzle device and the Griffin M4SD-K suppressor.
+    public const string Nl545Gp = "68c2940aecc41cc5490bd40e";
+    public const string Nl545Di = "68c16b9ab6b75a8a480520a6";
+    public const string JailBrake = "5c78f2882e22165df16b832e";
+    public const string M4sdK = "638612b607dfed1ccb7206ba";
+    public const string M4sdKFde = "69f0eb8c02bba0856602897e";
 
     public const string DogtagCase = "5c093e3486f77430cb02e593";
     public const string SpecOpsCase = "f39e1020a6eb538f07653b87";
@@ -252,6 +267,20 @@ internal static class Clones
             new(Ids.Mechanic, 4, ["6a759e292d6cc46c49c03b36"], 6, OwnPriceTrader: Ids.Mechanic),
             new(Ids.NatoQuartermaster, 1, ["6a5f7d23e728fd472d2171be"], 6, OwnPriceTrader: Ids.NatoQuartermaster,
                 FallbackPriceTrader: Ids.Mechanic, FallbackFactor: 1.25, Optional: true),
+        ]),
+        // 2x the 6L31 price: Mechanic's own offer if it has one, else Prapor's (LL4, the vanilla seller). NATO: its own offer, else Prapor's x1.25.
+        new("MOD-6L31", "6L31", Ids.Mag6L31, Ids.Mod6L31, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            new(Ids.Mechanic, 4, ["ccf48448d3e771b176c93294"], 6, OwnPriceTrader: Ids.Mechanic, FallbackPriceTrader: Ids.Prapor),
+            new(Ids.NatoQuartermaster, 1, ["a22773e18b94f94bbea47ff1"], 6, OwnPriceTrader: Ids.NatoQuartermaster,
+                FallbackPriceTrader: Ids.Prapor, FallbackFactor: 1.25, Optional: true),
+        ]),
+        // 2x the RK-1 price: Mechanic's own offer if it has one, else Skier's (LL4, the vanilla seller). NATO: its own offer, else Skier's x1.25.
+        new("RK-1M", "RK-1", Ids.Rk1, Ids.ModRk1, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
+        [
+            new(Ids.Mechanic, 4, ["eacfcdd4a1f0c2c450249855"], 6, OwnPriceTrader: Ids.Mechanic, FallbackPriceTrader: Ids.Skier),
+            new(Ids.NatoQuartermaster, 1, ["bc2f88dd10d640ac9a937404"], 6, OwnPriceTrader: Ids.NatoQuartermaster,
+                FallbackPriceTrader: Ids.Skier, FallbackFactor: 1.25, Optional: true),
         ]),
         new("PS-321", "PS-320", Ids.Ps320, Ids.Ps321, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
         [

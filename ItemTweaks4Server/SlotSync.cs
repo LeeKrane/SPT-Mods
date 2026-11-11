@@ -12,7 +12,7 @@ namespace ItemTweaks4Server;
 /// cosmetic variants, such as the White Tusk EXFIL helmet, a copy of its vanilla source's slots after every other mod edited them
 /// (WolfiksHeavyTrooperMasks' heavy trooper masks in mod_nvg, an extra mod_equipment_002 slot). Our clone was copied from White Tusk at
 /// Preload + 10, before that, so it would miss them; this runs right after Aishi's step. Slot parents stay the vanilla helmet's, as on
-/// White Tusk. Also gives Secure container Omega the final grid filters of Theta (see SyncOmegaFilters).
+/// White Tusk. Also gives Secure container Omega the final grid filters of Theta (see SyncOmegaFilters) and drops the M4SD-K from the JailBrake's conflict list (see FixJailBrakeConflict).
 /// </summary>
 [Injectable(TypePriority = int.MaxValue - 5)]
 public sealed class SlotSync(ILogger<SlotSync> logger, TemplateTable templateTable, ICloner cloner) : IOnLoad
@@ -44,6 +44,7 @@ public sealed class SlotSync(ILogger<SlotSync> logger, TemplateTable templateTab
             }
         }
         Guard("Secure container Omega grid filters", SyncOmegaFilters);
+        Guard("JailBrake / M4SD-K conflict", FixJailBrakeConflict);
         return Task.CompletedTask;
     }
 
@@ -60,6 +61,18 @@ public sealed class SlotSync(ILogger<SlotSync> logger, TemplateTable templateTab
         for (var i = 0; i < grids.Count && i < OmegaFromTheta.Length; i++)
             grids[i].Properties!.Filters = cloner.Clone(theta[OmegaFromTheta[i]].Properties!.Filters);
         logger.LogInformation("[ItemTweaks4Server] Secure container Omega: grid filters copied from Theta");
+    }
+
+    /// <summary>
+    /// The SAI JailBrake's ConflictingItems lists the normal Griffin M4SD-K suppressor but not ISB-Aishi's FDE one, so the normal one
+    /// cannot be fitted with a JailBrake (the JailBrake sits in the SAI handguard's muzzle slot, the M4SD-K on the barrel's muzzle device).
+    /// Removes it from that list so it behaves like the FDE one. Nothing else lists the JailBrake and no list of the M4SD-K does.
+    /// </summary>
+    private void FixJailBrakeConflict()
+    {
+        if (!templateTable.Items.TryGetValue(new MongoId(Ids.JailBrake), out var jailBrake) || jailBrake.Properties?.ConflictingItems is not { } conflicts) return;
+        var removed = conflicts.Remove(new MongoId(Ids.M4sdK));
+        logger.LogInformation("[ItemTweaks4Server] SAI JailBrake no longer conflicts with the M4SD-K (was listed: {Removed}, FDE one listed: {Fde})", removed, conflicts.Contains(new MongoId(Ids.M4sdKFde)));
     }
 
     private void Guard(string what, Action action)
