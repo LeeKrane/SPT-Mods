@@ -167,6 +167,9 @@ internal static class Ids
 
     public const string Sicc = "5d235bb686f77443f4331278";
     public const string RedlineDossier = "34c6e81189d757ca98a05adb";
+
+    public const string KappaDesecrated = "676008db84e242067d0dc4c9";
+    public const string SecureContainerOmega = "22776b1c216596a5e40a8e2c";
 }
 
 internal static class Clones
@@ -295,6 +298,10 @@ internal static class Clones
         // White Tusk overrides, as Aishi's own items do not exist yet at this point. Fits wherever the vanilla helmet fits. Flea only (the White Tusk price).
         new("EXFIL helmet (BD Black Camo)", "Team Wendy EXFIL Ballistic Helmet", Ids.TeamWendyExfil, Ids.ExfilBdBlackCamo, "db/ExfilHelmet", "ISB-Aishi",
             Ids.ExfilBdBlackCamoPreset, ShareMastery: false, ReplicateFilters: true, [], IsVariant: false, RequiredType: "Aishi.ModMetadata"),
+        // Secure container: Desecrated Kappa look, 1 kg, Theta's grids (4x2, 1x2) plus a 5x1 and Theta's item whitelists. Fits wherever the Desecrated Kappa fits.
+        // Only obtainable as a prestige 4+ reward (PrestigeRewards): no trader, flea, loot or bots.
+        new("Secure container Omega", "Secure container Kappa (Desecrated)", Ids.KappaDesecrated, Ids.SecureContainerOmega, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
+            [], IsVariant: false),
     ];
 }
 
