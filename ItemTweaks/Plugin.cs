@@ -117,6 +117,8 @@ namespace Krane.ItemTweaks
             catch (Exception e) { Log.LogError(e); }
             try { KetaMystery.Init(h); }
             catch (Exception e) { Log.LogError(e); }
+            try { OmegaLayout.Init(h); }
+            catch (Exception e) { Log.LogError(e); }
             try { MedSpeed.Init(h); }
             catch (Exception e) { Log.LogError(e); }
             Log.LogInfo("ItemTweaks loaded");
