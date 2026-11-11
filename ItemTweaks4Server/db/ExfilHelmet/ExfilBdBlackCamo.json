@@ -1,6 +1,6 @@
 {
   "bf1a3157a6706c4a2e0d7c9e": {
-    "itemTplToClone": "5e00c1ad86f774747333222c",
+    "itemTplToClone": "a321239209cb583baea69ca1",
     "parentId": "5a341c4086f77401f2541505",
     "handbookParentId": "5b47574386f77428ca22b330",
     "overrideProperties": {
@@ -8,83 +8,8 @@
         "path": "equipment/item_equipment_helmet_team_wendy_exfil_blackcamo_aishi.bundle",
         "rcid": ""
       },
-      "BackgroundColor": "yellow",
       "CanSellOnRagfair": true,
-      "CanRequireOnRagfair": true,
-      "Slots": [
-        {
-          "_id": "5e00c1ad86f774747333222e",
-          "_mergeSlotWithChildren": false,
-          "_name": "mod_equipment_000",
-          "_parent": "bf1a3157a6706c4a2e0d7c9e",
-          "_props": {
-            "filters": [
-              {
-                "Filter": ["5e00cfa786f77469dc6e5685", "5e01f31d86f77465cf261343", "66b5f69ea7f72d197e70bcdb", "66b5f6a28ca68c6461709ed8"],
-                "Shift": 0
-              }
-            ]
-          },
-          "_proto": "55d30c4c4bdc2db4468b457e",
-          "_required": false
-        },
-        {
-          "_id": "5e00c1ad86f774747333222f",
-          "_mergeSlotWithChildren": false,
-          "_name": "mod_nvg",
-          "_parent": "bf1a3157a6706c4a2e0d7c9e",
-          "_props": {
-            "filters": [
-              {
-                "Filter": ["5c0558060db834001b735271", "5a16b8a9fcdbcb00165aa6ca"],
-                "Shift": 0
-              }
-            ]
-          },
-          "_proto": "55d30c4c4bdc2db4468b457e",
-          "_required": false
-        },
-        {
-          "_id": "6551fe9fffab45c12d0fc4d8",
-          "_mergeSlotWithChildren": true,
-          "_name": "helmet_top",
-          "_parent": "bf1a3157a6706c4a2e0d7c9e",
-          "_props": {
-            "filters": [
-              {
-                "Filter": ["7fde456712f75876aac4bd41", "6551fec55d0cf82e51014288"],
-                "Plate": "7fde456712f75876aac4bd41",
-                "armorColliders": ["ParietalHead"],
-                "armorPlateColliders": [],
-                "bluntDamageReduceFromSoftArmor": false,
-                "locked": true
-              }
-            ]
-          },
-          "_proto": "64479fdf9731c8fadc0642c1",
-          "_required": true
-        },
-        {
-          "_id": "655201ff3b23749ada09a768",
-          "_mergeSlotWithChildren": true,
-          "_name": "helmet_back",
-          "_parent": "bf1a3157a6706c4a2e0d7c9e",
-          "_props": {
-            "filters": [
-              {
-                "Filter": ["7400edf574275ab892637d76", "655200ba0ef76cf7be09d528"],
-                "Plate": "7400edf574275ab892637d76",
-                "armorColliders": ["BackHead"],
-                "armorPlateColliders": [],
-                "bluntDamageReduceFromSoftArmor": false,
-                "locked": true
-              }
-            ]
-          },
-          "_proto": "64479fdf9731c8fadc0642c1",
-          "_required": true
-        }
-      ]
+      "CanRequireOnRagfair": true
     },
     "locales": {
       "en": {
@@ -95,7 +20,9 @@
     },
     "fleaPriceRoubles": 21949,
     "handbookPriceRoubles": 21949,
-    "addtoInventorySlots": ["HeadWear"],
+    "addtoInventorySlots": [
+      "HeadWear"
+    ],
     "addtoTraders": false,
     "addtoBots": false,
     "addtoItemBlacklist": false,

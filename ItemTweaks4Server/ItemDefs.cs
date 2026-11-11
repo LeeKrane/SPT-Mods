@@ -162,7 +162,7 @@ internal static class Ids
     public const string MoreCasesWeaponRack = "a3c2c001eb04d2cc82bd8983";
     public const string MoreCasesToolbox = "9356c871d08f21db38e4c6ec";
 
-    public const string TeamWendyExfil = "5e00c1ad86f774747333222c";
+    public const string ExfilWhiteTusk = "a321239209cb583baea69ca1";
     public const string ExfilBdBlackCamo = "bf1a3157a6706c4a2e0d7c9e";
     public const string ExfilBdBlackCamoPreset = "1965bf04400dbefd19d2786d";
 
@@ -298,9 +298,9 @@ internal static class Clones
         // Fits wherever the SICC fits, joins none of its quests or bot pools. Flea only (2x the SICC flea price), no trader.
         new("Redline dossier", "S I C C organizational pouch", Ids.Sicc, Ids.RedlineDossier, "db/CustomItems", null, null, ShareMastery: false, ReplicateFilters: true,
             [], IsVariant: false),
-        // ISB-Aishi's White Tusk Arctic EXFIL helmet (modified class 5 inserts) with the Black Camo model. Cloned from the vanilla EXFIL helmet plus the
-        // White Tusk overrides, as Aishi's own items do not exist yet at this point. Fits wherever the vanilla helmet fits. Flea only (the White Tusk price).
-        new("EXFIL helmet (BD Black Camo)", "Team Wendy EXFIL Ballistic Helmet", Ids.TeamWendyExfil, Ids.ExfilBdBlackCamo, "db/ExfilHelmet", "ISB-Aishi",
+        // ISB-Aishi's White Tusk Arctic EXFIL helmet (modified class 5 inserts, its own slot filters, e.g. the heavy trooper masks) with the Black Camo
+        // model. Aishi creates its items at Preload + 3, before this. Fits wherever the White Tusk helmet fits. Flea only (the White Tusk price).
+        new("EXFIL helmet (BD Black Camo)", "Team Wendy EXFIL Ballistic Helmet (White Tusk Arctic)", Ids.ExfilWhiteTusk, Ids.ExfilBdBlackCamo, "db/ExfilHelmet", "ISB-Aishi",
             Ids.ExfilBdBlackCamoPreset, ShareMastery: false, ReplicateFilters: true, [], IsVariant: false, RequiredType: "Aishi.ModMetadata"),
         // Secure container: Desecrated Kappa look, 1 kg, Theta's grids (4x2, 1x2) plus a 5x1 and Theta's item whitelists. Fits wherever the Desecrated Kappa fits.
         // Only obtainable as a prestige 4+ reward (PrestigeRewards): no trader, flea, loot or bots.
