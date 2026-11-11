@@ -168,6 +168,9 @@ internal static class Ids
     public const string Sicc = "5d235bb686f77443f4331278";
     public const string RedlineDossier = "34c6e81189d757ca98a05adb";
 
+    public const string Slx68 = "652911e650dc782999054b9d";
+    public const string SpecialSlx68 = "6984367b0aa5465355c4ded3";
+
     public const string KappaDesecrated = "676008db84e242067d0dc4c9";
     public const string SecureContainerOmega = "22776b1c216596a5e40a8e2c";
 }

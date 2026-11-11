@@ -36,6 +36,7 @@ public sealed class ItemIntegrations(
     {
         // Before the offers below are added, so only NATO Quartermaster's own offers are touched.
         Guard("NATO Quartermaster unlimited stock", MakeQuartermasterUnlimited);
+        Guard("Special SLX68 suppressor stats", AlignSpecialSlx68);
 
         foreach (var def in Clones.All)
         {
@@ -116,6 +117,30 @@ public sealed class ItemIntegrations(
             count++;
         }
         logger.LogInformation("[ItemTweaks4Server] NATO Quartermaster: {Count} offers set to unlimited stock", count);
+    }
+
+    /// <summary>
+    /// BetterSuppressors (priority 1000) sets every suppressor's Ergonomics, DurabilityBurnModificator, HeatFactor, CoolFactor,
+    /// Accuracy and Velocity before ISB-Aishi clones the regular SLX68 into its Special one (Preload + 3), whose overrides then
+    /// restore worse Ergonomics, durability burn, heat and velocity. Copy those props from the regular SLX68, keeping the
+    /// Special's own Recoil, Loudness and Weight.
+    /// </summary>
+    private void AlignSpecialSlx68()
+    {
+        if (!templateTable.Items.TryGetValue(new MongoId(Ids.SpecialSlx68), out var special) || special.Properties is not { } sp)
+        {
+            logger.LogInformation("[ItemTweaks4Server] ISB-Aishi Special SLX68 suppressor not found, stats not aligned");
+            return;
+        }
+        var regular = templateTable.Items[new MongoId(Ids.Slx68)].Properties!;
+        sp.Ergonomics = regular.Ergonomics;
+        sp.DurabilityBurnModificator = regular.DurabilityBurnModificator;
+        sp.HeatFactor = regular.HeatFactor;
+        sp.CoolFactor = regular.CoolFactor;
+        sp.Accuracy = regular.Accuracy;
+        sp.Velocity = regular.Velocity;
+        logger.LogInformation("[ItemTweaks4Server] Special SLX68 suppressor aligned with the regular one (ergo {Ergo}, burn {Burn}, heat {Heat}, recoil {Recoil})",
+            sp.Ergonomics, sp.DurabilityBurnModificator, sp.HeatFactor, sp.Recoil);
     }
 
     private void Guard(string what, Action action)
