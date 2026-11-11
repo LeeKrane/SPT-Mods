@@ -174,6 +174,7 @@ internal static class Ids
 
     public const string KappaDesecrated = "676008db84e242067d0dc4c9";
     public const string SecureContainerOmega = "22776b1c216596a5e40a8e2c";
+    public const string Theta = "664a55d84a90fc2c8a6305c9";
 
     public const string MedCase = "5aafbcd986f7745e590fff23";
     public const string MediPouch = "8fd4a50de9a76655273833d8";

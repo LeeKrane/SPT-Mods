@@ -48,6 +48,6 @@ Fika: no network changes; repair is local. Known limitation: other players (and 
 | Look / Flat Color | `true` | Spec-ops kit case: replace the albedo texture with a flat color. Off: multiply the texture by the color only (stays dark). Icons already cached keep the old look. |
 | Look / Key Case Color | gray (0.75) | Spec-ops key case: the keychain model and icon are multiplied by this color (darkens). Icons already cached keep the old look. |
 | Look / Redline Dossier Color | gray (0.5) | Redline dossier: the S I C C pouch model and icon are multiplied by this color (darkens). Icons already cached keep the old look. |
-| Look / MediPouch Color | gray (0.55) | MediPouch: flat color replacing the S I C C pouch albedo (model and icon), so it reads gray. Icons already cached keep the old look. |
+| Look / MediPouch Color | gray (0.3) | MediPouch: flat color replacing the S I C C pouch albedo (model and icon), so it reads gray. Icons already cached keep the old look. |
 | Repair / Allow Repair Kits In Raid | `true` | Allow using armor/weapon repair kits in raid (drag onto item or context menu Repair, instant). Off: vanilla, no repair in raid. |
 | Repair / In-Raid Wear Percent | `10` | Max durability lost by an in-raid kit repair, in percent of the normal kit repair loss (0 to 100; 100 = as a stash kit repair, 0 = none). Weapons, armor and plates. |

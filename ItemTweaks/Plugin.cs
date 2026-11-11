@@ -110,7 +110,7 @@ namespace Krane.ItemTweaks
                 "Spec-ops key case: color the Gingy keychain model and icon are multiplied by (darkens it). Changes apply to icons generated after a game restart.");
             RedlineTintColor = Config.Bind("Look", "Redline Dossier Color", new Color(0.5f, 0.5f, 0.5f, 1f),
                 "Redline dossier: color the S I C C pouch model and icon are multiplied by (darkens it). Changes apply to icons generated after a game restart.");
-            MediPouchTintColor = Config.Bind("Look", "MediPouch Color", new Color(0.55f, 0.55f, 0.55f, 1f),
+            MediPouchTintColor = Config.Bind("Look", "MediPouch Color", new Color(0.3f, 0.3f, 0.3f, 1f),
                 "MediPouch: flat color that replaces the S I C C pouch albedo (model and icon), so it comes out gray. Changes apply to icons generated after a game restart.");
 
             var h = new Harmony("krane.itemtweaks");
