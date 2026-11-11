@@ -141,6 +141,7 @@ internal static class Ids
 
     public const string ModSpearUpperBlack = "6892180ee9f15149b0677260";
     public const string Xm1184Ap = "699b54a97d3c1c9f69f616b6";
+    public const string ModifiedLbt1961a = "693873a5b94c659818e18a1c";
 
     // WTT-Artem items it makes unsellable (explicitly, or inherited from an unsellable source).
     public const string ArtemRaidBackpackBlack = "6673b1ac5cae0610f1079d71";
@@ -322,6 +323,8 @@ internal static class ItemOffers
         ]),
         // ISB-Aishi marks it unsellable and puts it on the item blacklist (WTT addtoItemBlacklist). Flea only, no trader.
         new("6.8x51mm SIG XM1184 AP", Ids.Xm1184Ap, "ISB-Aishi", [], Flea: true),
+        // Same for the first Modified LBT-1961A rig (not V2). Flea only, at ISB-Aishi's flea price.
+        new("Modified LBT-1961A Load Bearing Chest Rig", Ids.ModifiedLbt1961a, "ISB-Aishi", [], Flea: true),
 
         // WTT-Artem marks these unsellable. Flea only, at Artem's flea prices.
         new("6Sh118 raid backpack (Black)", Ids.ArtemRaidBackpackBlack, "WTT-Artem", [], Flea: true),
