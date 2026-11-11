@@ -76,10 +76,10 @@ public sealed class ItemIntegrations(
     }
 
     /// <summary>
-    /// Flea-sellable, and off the two lists that keep an item out of the dynamic offers: the flea's custom blacklist and the item blacklist
-    /// cache the flea check reads (ItemHelper.IsValidItem -> ItemFilterService.IsItemBlacklisted). That cache is a copy of item.json's
-    /// blacklist made when ItemFilterService is built, so the config list itself is left alone: code reading it directly (loot) still
-    /// skips the item. Runs before RagfairCallbacks generates the offers.
+    /// Flea-sellable, and off the lists that keep an item out of the dynamic offers: the flea's custom blacklist, item.json's blacklist
+    /// (ItemConfig.Blacklist, read directly by RagfairAssortGenerator via ItemFilterService.GetBlacklistedItems; WTT's addtoItemBlacklist
+    /// adds mod items there) and the copy of it ItemFilterService makes when built (ItemHelper.IsValidItem -> IsItemBlacklisted).
+    /// Runs before RagfairCallbacks generates the offers.
     /// </summary>
     private void PutOnFlea(ItemOfferDef def)
     {
@@ -89,7 +89,7 @@ public sealed class ItemIntegrations(
         props.CanRequireOnRagfair = true;
         var cache = typeof(ItemFilterService).GetField("ItemBlacklistCache", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(itemFilterService) as HashSet<MongoId>
             ?? throw new MissingFieldException(nameof(ItemFilterService), "ItemBlacklistCache");
-        var itemBlacklist = cache.Remove(tpl);
+        var itemBlacklist = itemFilterService.GetBlacklistedItems().Remove(tpl) | cache.Remove(tpl);
         var fleaBlacklist = ragfairConfig.Dynamic.Blacklist.Custom.Remove(tpl);
         if (def.FleaPrice is { } price) templateTable.Prices![tpl] = price;
         logger.LogInformation("[ItemTweaks4Server] {Name} put on the flea (was on item blacklist: {Item}, flea blacklist: {Flea}, price: {Price})", def.Name, itemBlacklist, fleaBlacklist,
