@@ -8,7 +8,7 @@
 #   inventory.sh local                        this machine's client (~/Games/spt/drive_c/SPT/BepInEx); run this on tariognatha too
 #   inventory.sh all                          local client + taragarmr (server, both headless), via read-only rsync of *.dll/package.json/mod.json
 #
-# Env: HOST (default taragarmr), TMPDIR_INV (default /home/krane/.claude/jobs/2eab8ffa/tmp)
+# Env: HOST (default taragarmr), TMPDIR_INV (default: fresh mktemp dir, removed on exit)
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 proj="$here/inventory"
@@ -27,7 +27,7 @@ tool() { build; run_dotnet "$proj/out/Inventory.dll" "$@"; }
 
 local_client="$HOME/Games/spt/drive_c/SPT/BepInEx"
 HOST="${HOST:-taragarmr}"
-T="${TMPDIR_INV:-/home/krane/.claude/jobs/2eab8ffa/tmp}"
+if [ -n "${TMPDIR_INV:-}" ]; then T=$TMPDIR_INV; else T=$(mktemp -d); trap 'rm -rf "$T"' EXIT; fi
 
 pull() { # remote path -> local dir (dll + small metadata only)
   mkdir -p "$2"
