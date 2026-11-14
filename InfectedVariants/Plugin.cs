@@ -24,7 +24,7 @@ using Newtonsoft.Json.Linq;
 namespace Krane.InfectedVariants
 {
     // "com.krane." on purpose: it sorts before "com.lennoxp90.factoryclassic", see the header.
-    [BepInPlugin("com.krane.infectedvariants", "Krane's InfectedVariants", "1.2.2")]
+    [BepInPlugin("com.krane.infectedvariants", "Krane's InfectedVariants", "1.3.0")]
     // Hard, and 1.1.0 or later: it also guarantees MapVariants' Awake has run, which makes registering later legal.
     [BepInDependency("com.lennoxp90.mapvariants", "1.1.0")]
     public class Plugin : BaseUnityPlugin
@@ -40,6 +40,9 @@ namespace Krane.InfectedVariants
         private const string FactoryId = "factory4_day";           // either Factory id marks FactoryClassic's registration
         private const string FactoryHalloweenId = "halloween2026"; // FactoryClassic's declared variant id
         private const string FactoryOldName = "Halloween 2026";    // the name FactoryClassic gives it
+        private const string HalloweenGuid = "com.manimal.halloween2026"; // Manimal's Halloween 2026 Backport: it registers Labs itself
+        private const string LabsId = "laboratory";
+        private const string LabsOldName = "Halloween 2026"; // the name the backport gives its Labs variant (id "backport")
         private const string InfectedName = "Infected";
         private const string InfectedText = "Zombies everywhere";
 
@@ -61,6 +64,7 @@ namespace Krane.InfectedVariants
         {
             Log = Logger;
             HookFactoryRename();
+            HookLabsRename();
             try
             {
                 // Awake runs once per screen instance, so a failed attempt there could never be retried; Show runs on every opening.
@@ -131,6 +135,49 @@ namespace Krane.InfectedVariants
             {
                 orphans[definition] = InfectedName;
                 Log.LogInfo($"Stored {section} DefaultSelection '{stored}' migrated to '{InfectedName}'.");
+            }
+        }
+
+        // The Halloween 2026 Backport registers Labs ("The Lab") in its Awake through the 8-argument Maps.Register, naming the backport variant
+        // "Halloween 2026". Same rewrite as Factory's, on that call: the tile, loading label and F12 list read "Infected". Nothing here checks
+        // for the backport: only that registration (laboratory + that name) is ever touched, and this plugin loads first (GUID order).
+        private static void HookLabsRename()
+        {
+            try
+            {
+                if (Chainloader.PluginInfos.ContainsKey(HalloweenGuid))
+                {
+                    Log.LogWarning("The Halloween 2026 Backport loaded before this plugin; its Labs variant keeps the name Halloween 2026.");
+                    return;
+                }
+                var type = AccessTools.TypeByName(MapsTypeName);
+                var register = type == null ? null : AccessTools.Method(type, "Register", new[]
+                {
+                    typeof(string[]), typeof(string), typeof(string), typeof(string), typeof(string), typeof(string), typeof(Action<string>), typeof(Func<string[]>)
+                });
+                if (register == null) { Log.LogWarning($"{MapsTypeName}.Register not found; the backport's Labs variant keeps its name."); return; }
+                new Harmony("krane.infectedvariants.labs").Patch(register, prefix: new HarmonyMethod(AccessTools.Method(typeof(Plugin), nameof(RenameLabsVariant))));
+            }
+            catch (Exception e)
+            {
+                Log.LogError($"Could not hook the backport's Labs variant name; it keeps Halloween 2026: {e}");
+            }
+        }
+
+        // Parameter names must equal Maps.Register's own; backportName is by ref so the change reaches the call.
+        private static void RenameLabsVariant(string[] locationIds, string displayName, ref string backportName)
+        {
+            try
+            {
+                if (locationIds == null || !string.Equals(backportName?.Trim(), LabsOldName, StringComparison.OrdinalIgnoreCase)) return;
+                if (!locationIds.Any(id => string.Equals(id?.Trim(), LabsId, StringComparison.OrdinalIgnoreCase))) return;
+                backportName = InfectedName;
+                MigrateStoredDefault(displayName);
+                Log.LogInfo($"Labs' '{LabsOldName}' variant is named '{InfectedName}'.");
+            }
+            catch (Exception e)
+            {
+                Log.LogError($"Could not rename the backport's Labs variant; it keeps Halloween 2026: {e}");
             }
         }
 
@@ -205,6 +252,11 @@ namespace Krane.InfectedVariants
                 {
                     if (isManaged != null && ids.Any(id => isManaged.Invoke(null, new object[] { id }) is bool b && b))
                     {
+                        if (ids.Any(id => string.Equals(id?.Trim(), LabsId, StringComparison.OrdinalIgnoreCase)) && Chainloader.PluginInfos.ContainsKey(HalloweenGuid))
+                        {
+                            Log.LogInfo($"{name}: the Halloween 2026 Backport provides it ({InfectedName}); nothing registered here.");
+                            continue;
+                        }
                         Log.LogError($"{name}: MapVariants already manages one of {string.Join(",", ids)} (a maps.json entry?); remove that entry, or {name} is not offered as Infected.");
                         continue;
                     }

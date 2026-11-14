@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using HarmonyLib;
 using Microsoft.Extensions.Logging;
@@ -7,6 +8,7 @@ using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Helpers.Server;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Spt.Config;
+using SPTarkov.Server.Core.Models.Spt.Mod;
 using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Services.InRaid;
@@ -74,6 +76,14 @@ internal static class State
     public static readonly Dictionary<string, string> BackportNames = new(StringComparer.OrdinalIgnoreCase);
 
     public static bool LabsOnlyInfected = true;
+
+    public const string BackportVariant = "backport"; // MapVariants' wire value of a provider's second location
+
+    /// <summary>Manimal's Halloween 2026 Backport is installed and registers the Labs pair ("backport" = its infected Labs): Labs is left to it.</summary>
+    public static bool BackportLabs;
+
+    /// <summary>The backport's infected Labs raid: its own data (infection, infected-only bosses, waves) is final, so nothing is enforced on it.</summary>
+    public static bool OwnedByBackport(string id, string? variant) => BackportLabs && id == Labs && variant == BackportVariant;
 
     public static double Percent = 100;
     public static MapVariantsBridge? Bridge;
@@ -386,6 +396,62 @@ internal sealed class RegistryProbe
 }
 
 /// <summary>
+/// Finds Manimal's Halloween 2026 Backport by its mod GUID (every server mod ships an IModMetadata, so the loaded assemblies tell) and
+/// reads its config.json: with InfectedLabsEnabled false it registers no Labs pair, so this mod keeps Labs. The backport registers its
+/// pair at int.MaxValue (after this mod and MapVariants' discovery), so the registry cannot be probed for it at PostLoad.
+/// </summary>
+internal static class HalloweenBackport
+{
+    private const string Guid = "com.manimal.halloween2026";
+
+    public static bool ProvidesLabs(ModHelper modHelper, ILogger logger)
+    {
+        try
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type[] types;
+                try { types = assembly.GetTypes(); }
+                catch (ReflectionTypeLoadException e) { types = e.Types.Where(t => t is not null).ToArray()!; }
+                catch { continue; }
+                foreach (var type in types)
+                {
+                    if (type.IsAbstract || type.IsInterface || !typeof(IModMetadata).IsAssignableFrom(type) || type.GetConstructor(Type.EmptyTypes) is null) continue;
+                    string? guid;
+                    try { guid = (Activator.CreateInstance(type) as IModMetadata)?.ModGuid; }
+                    catch { continue; }
+                    if (!string.Equals(guid, Guid, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    var enabled = true;
+                    try
+                    {
+                        var path = Path.Combine(modHelper.GetAbsolutePathToModFolder(assembly), "config.json");
+                        if (File.Exists(path))
+                        {
+                            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+                            if (doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.TryGetProperty("InfectedLabsEnabled", out var flag) && flag.ValueKind == JsonValueKind.False)
+                                enabled = false;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogWarning("{Tag} Could not read the Halloween 2026 Backport's config.json ({Error}); assuming its Labs is enabled", State.Tag, e.Message);
+                    }
+                    if (enabled) logger.LogInformation("{Tag} Halloween 2026 Backport found: it provides the Infected Labs, no Labs pair is registered here", State.Tag);
+                    else logger.LogInformation("{Tag} Halloween 2026 Backport found but its InfectedLabsEnabled is false: this mod handles Labs", State.Tag);
+                    return enabled;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning("{Tag} Could not look for the Halloween 2026 Backport ({Error}); assuming it is absent", State.Tag, e.Message);
+        }
+        return false;
+    }
+}
+
+/// <summary>
 /// PostLoad (before MapVariants' VariantDiscovery at PostLoad + 500000): for every enabled map either hands MapVariants a vanilla / infected
 /// pair (unmodded map) or declares the "infected" variant on the backport a mod installed (modded map), and installs the per-raid
 /// enforcement patch.
@@ -410,6 +476,7 @@ public sealed class InfectedRegistration(
             State.Cloner = cloner;
             var enabled = LoadConfig();
             State.Bridge = new MapVariantsBridge(provider, logger);
+            State.BackportLabs = HalloweenBackport.ProvidesLabs(modHelper, logger);
 
             var harmony = new Harmony("krane.infectedvariantsserver");
             harmony.PatchAll(typeof(InfectedRegistration).Assembly);
@@ -423,6 +490,7 @@ public sealed class InfectedRegistration(
                     logger.LogInformation("{Tag} {Map}: not in EnabledMaps; no Infected variant", State.Tag, spec.Name);
                     continue;
                 }
+                if (spec.Key == State.Labs && State.BackportLabs) continue; // the backport's "The Lab - Halloween 2026" pair is the Infected Labs
                 try { RegisterMap(spec, probe); }
                 catch (Exception e) { logger.LogError("{Tag} {Map}: setup threw; no Infected variant there: {Error}", State.Tag, spec.Name, e); }
             }
@@ -609,6 +677,11 @@ internal static class GenerateLocationPatch
             if (__result is null || string.IsNullOrEmpty(name)) return;
             var id = name.ToLowerInvariant();
             var variant = State.Bridge?.InstalledVariant(id);
+            if (State.OwnedByBackport(id, variant))
+            {
+                State.Log?.LogInformation("{Tag} raid on {Id} ({Variant}): Halloween 2026 Backport's infected Labs, its data is left as it is", State.Tag, id, variant);
+                return;
+            }
             var infected = State.IsInfected(id, variant);
             var changes = Enforcer.Apply(__result, id, infected);
             if (infected || State.IsManaged(id) || changes is not null)
@@ -641,6 +714,7 @@ public sealed class InfectedSweep(ILogger<InfectedSweep> logger, LocationTable l
                 var id = location?.Base?.Id?.ToLowerInvariant();
                 if (id is null || State.FactoryIds.Contains(id)) continue;
                 var variant = State.Bridge?.InstalledVariant(id);
+                if (State.OwnedByBackport(id, variant)) continue;
                 if (Enforcer.Apply(location!.Base!, id, State.IsInfected(id, variant)) is not null) cleaned++;
             }
 
