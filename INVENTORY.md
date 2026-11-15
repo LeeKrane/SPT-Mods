@@ -239,6 +239,7 @@ Server table checked against `journalctl --user -u spt-server` "Mod:" lines (58 
 | spt-prepatch.dll | spt-prepatch | - | 4.1.6+d52d9c99836b6d7dc5ad93852cd8032158df0f9c (asm 4.1.6.0) |
 
 ## Client tarmantria (`~/Games/spt/drive_c/SPT/BepInEx`)
+
 **Plugins**
 
 | Folder/File | Name | GUID | Version |
@@ -256,6 +257,7 @@ Server table checked against `journalctl --user -u spt-server` "Mod:" lines (58 
 | DrakiaXYZ-QuestTracker/DrakiaXYZ-QuestTracker.dll | DrakiaXYZ-QuestTracker | xyz.drakia.questtracker | 1.7.0 |
 | DrakiaXYZ-TaskListFixes.dll | DrakiaXYZ-TaskListFixes | xyz.drakia.tasklistfixes | 1.8.0 |
 | DrakiaXYZ-Waypoints/DrakiaXYZ-Waypoints.dll | DrakiaXYZ-Waypoints | xyz.drakia.waypoints | 1.9.0 |
+| ExtraSpecialSlots/BlackHawk-ExtraSpecialSlots.Client.dll | ExtraSpecialSlots | blackhawk.extraspecialslots.client | 1.1.0 |
 | FastGrenadeThrow/FastGrenadeThrow.dll | Fast Grenade Throw | com.vultify.fastgrenadethrow | 2.0.0 |
 | Fika/Fika.Core.dll | Fika.Core | com.fika.core | 2.4.6 |
 | HandsAreNotBusy.dll | HandsAreNotBusy | com.lacyway.hanb | 1.7.1 |
@@ -305,6 +307,7 @@ Server table checked against `journalctl --user -u spt-server` "Mod:" lines (58 
 | krane.AdsCameraDistance.dll (symlink @ 2000e48) | Krane's AdsCameraDistance | krane.adscameradistance | 1.0.0 |
 | krane.BtrInteriorVolume.dll (symlink @ 30dd1eb) | Krane's BtrInteriorVolume | krane.btrinteriorvolume | 1.0.0 |
 | krane.DecalLockFix.dll (symlink @ 2b0f28c) | DecalLockFix | krane.decallockfix | 1.0.0 |
+| krane.FleaCategoryBlock.dll (symlink @ 9233aa6) | Krane's FleaCategoryBlock | krane.fleacategoryblock | 1.1.0 |
 | krane.FleaOfferGuard.dll (symlink @ cb87b6a) | Krane's FleaOfferGuard | krane.fleaofferguard | 1.0.0 |
 | krane.HeadlessGuard.dll (symlink @ a885272) | Krane's HeadlessGuard | krane.headlessguard | 1.0.0 |
 | krane.InfectedVariants.dll (symlink @ e5637cf) | Krane's InfectedVariants | com.krane.infectedvariants | 1.3.0 |
