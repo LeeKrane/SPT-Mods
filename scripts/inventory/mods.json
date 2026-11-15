@@ -87,6 +87,7 @@
     {"name": "PlayerEncumbranceBar", "ids": {"server": [], "client": ["PlayerEncumbranceBar"]}, "targets": ["clients"]},
     {"name": "PrestigeDogtagFix", "ids": {"server": ["krane-PrestigeDogtagFix4Server"], "client": []}, "targets": ["server"]},
     {"name": "PrestigeTransferFilledContainers", "ids": {"server": [], "client": ["krane.PrestigeTransferFilledContainers"]}, "targets": ["clients"]},
+    {"name": "PrestigeTweaks", "ids": {"server": ["krane-PrestigeTweaks4Server"], "client": []}, "targets": ["server"]},
     {"name": "QuestCodex", "ids": {"server": ["QuestCodex"], "client": []}, "targets": ["server"]},
     {"name": "QuickSellFlea", "ids": {"server": [], "client": ["QuickSellFlea"]}, "targets": ["clients"]},
     {"name": "QuietWeather", "ids": {"server": [], "client": ["QuietWeather"]}, "targets": ["clients"]},

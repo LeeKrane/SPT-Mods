@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>krane.PrestigeTweaks4Server</AssemblyName>
+    <RootNamespace>PrestigeTweaks4Server</RootNamespace>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)../ServerMod.props" />
+
+  <ItemGroup>
+    <None Include="config.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
