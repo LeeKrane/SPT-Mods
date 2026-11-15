@@ -87,7 +87,7 @@ Server table checked against `journalctl --user -u spt-server` "Mod:" lines (58 
 | WTT-Armory/WTT-Armory.dll | WTT-Armory | com.wtt.armory | 2.0.5 | GrooveypenguinX | ~4.1.0 |
 | WTT-Artem/WTT-Artem.dll | Artem | com.crackbone.artem-wtt | 3.0.2 | Crackbone | ~4.1.0 |
 | WTT-ContentBackport/WTT-ContentBackport.dll | WTT-ContentBackport | com.wtt.contentbackport | 2.0.7 | GrooveypenguinX | ~4.1.6 |
-| WTT-ServerCommonLib/WTT-ServerCommonLib.dll | WTT-ServerCommonLib | com.wtt.commonlib | 3.0.6 | GrooveypenguinX | ~4.1.3 |
+| WTT-ServerCommonLib/WTT-ServerCommonLib.dll | WTT-ServerCommonLib | com.wtt.commonlib | 3.0.8 | GrooveypenguinX | ~4.1.3 |
 | [SVM] Server Value Modifier/ServerValueModifier.dll | SVM | fika.ghostfenixx.svm | 2.2.3 | GhostFenixx | ~4.1.3 |
 
 ## Headless 1 (taragarmr, `~/spt-headless/game/BepInEx`)
@@ -132,7 +132,7 @@ Server table checked against `journalctl --user -u spt-server` "Mod:" lines (58 
 | UseItemsAnywhere/UseItemsAnywhereFika.dll | Use Items Anywhere Fika | com.cj.UseItemsAnywhereFika | 1.0.0 |
 | VisitAPI/VisitAPI.dll | VisitAPI | com.sora.visitapi | 1.3.7 |
 | WTT-ArmoryClient/WTT-ArmoryClient.dll | WTT-Armory | com.wtt.armory | 2.0.5 |
-| WTT-ClientCommonLib/WTT-ClientCommonLib.dll | WTT-ClientCommonLib | com.wtt.commonlib | 3.0.6 |
+| WTT-ClientCommonLib/WTT-ClientCommonLib.dll | WTT-ClientCommonLib | com.wtt.commonlib | 3.0.8 |
 | WTT-ContentBackportClient/WTT-ContentBackportClient.dll | WTT-ContentBackportClient | com.wtt.contentbackport | 2.0.7 |
 | acidphantasm-botplacementsystem/acidphantasm-botplacementsystem.dll | acidphantasm-botplacementsystem | com.acidphantasm.botplacementsystem | 2.1.0 |
 | archangelwtf-contentbackportprestiges/ContentBackportPrestigesClient.dll | Content Backport - Prestiges | wtf.archangel.contentbackportprestiges | 1.1.0 |
@@ -206,7 +206,7 @@ Server table checked against `journalctl --user -u spt-server` "Mod:" lines (58 
 | UseItemsAnywhere/UseItemsAnywhereFika.dll | Use Items Anywhere Fika | com.cj.UseItemsAnywhereFika | 1.0.0 |
 | VisitAPI/VisitAPI.dll | VisitAPI | com.sora.visitapi | 1.3.7 |
 | WTT-ArmoryClient/WTT-ArmoryClient.dll | WTT-Armory | com.wtt.armory | 2.0.5 |
-| WTT-ClientCommonLib/WTT-ClientCommonLib.dll | WTT-ClientCommonLib | com.wtt.commonlib | 3.0.6 |
+| WTT-ClientCommonLib/WTT-ClientCommonLib.dll | WTT-ClientCommonLib | com.wtt.commonlib | 3.0.8 |
 | WTT-ContentBackportClient/WTT-ContentBackportClient.dll | WTT-ContentBackportClient | com.wtt.contentbackport | 2.0.7 |
 | acidphantasm-botplacementsystem/acidphantasm-botplacementsystem.dll | acidphantasm-botplacementsystem | com.acidphantasm.botplacementsystem | 2.1.0 |
 | archangelwtf-contentbackportprestiges/ContentBackportPrestigesClient.dll | Content Backport - Prestiges | wtf.archangel.contentbackportprestiges | 1.1.0 |
@@ -298,7 +298,7 @@ Server table checked against `journalctl --user -u spt-server` "Mod:" lines (58 
 | UseItemsAnywhere/UseItemsAnywhereFika.dll | Use Items Anywhere Fika | com.cj.UseItemsAnywhereFika | 1.0.0 |
 | VisitAPI/VisitAPI.dll | VisitAPI | com.sora.visitapi | 1.3.7 |
 | WTT-ArmoryClient/WTT-ArmoryClient.dll | WTT-Armory | com.wtt.armory | 2.0.5 |
-| WTT-ClientCommonLib/WTT-ClientCommonLib.dll | WTT-ClientCommonLib | com.wtt.commonlib | 3.0.6 |
+| WTT-ClientCommonLib/WTT-ClientCommonLib.dll | WTT-ClientCommonLib | com.wtt.commonlib | 3.0.8 |
 | WTT-ContentBackportClient/WTT-ContentBackportClient.dll | WTT-ContentBackportClient | com.wtt.contentbackport | 2.0.7 |
 | acidphantasm-botplacementsystem/acidphantasm-botplacementsystem.dll | acidphantasm-botplacementsystem | com.acidphantasm.botplacementsystem | 2.1.0 |
 | archangelwtf-contentbackportprestiges/ContentBackportPrestigesClient.dll | Content Backport - Prestiges | wtf.archangel.contentbackportprestiges | 1.1.0 |
