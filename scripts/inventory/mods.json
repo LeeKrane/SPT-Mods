@@ -54,6 +54,7 @@
     {"name": "Increase Climb Height", "ids": {"server": ["Increase Climb Height"], "client": []}, "targets": ["server"]},
     {"name": "InfectedVariants", "ids": {"server": ["krane-InfectedVariants4Server"], "client": ["krane.InfectedVariants"]}, "targets": ["server", "headless", "clients"]},
     {"name": "Instant Insurance", "ids": {"server": ["ozen.InstantInsurance"], "client": []}, "targets": ["server"]},
+    {"name": "IOF: Inventory Organizing Feature", "ids": {"server": [], "client": ["flir.iof"]}, "targets": ["clients"]},
     {"name": "InstantTraderDialogs", "ids": {"server": [], "client": ["krane.InstantTraderDialogs"]}, "targets": ["clients"]},
     {"name": "ISB Aishi", "ids": {"server": ["ISB-Aishi"], "client": ["ISBAishiPlugin"]}, "targets": ["server", "headless", "clients"]},
     {"name": "ISB Special Forces", "ids": {"server": ["ISB-SpecialForces"], "client": ["ISBSpecialForcesPlugin", "ISBSpecialForces"]}, "targets": ["server", "headless", "clients"]},

@@ -544,6 +544,15 @@
     },
     {
       "kind": "plugin",
+      "key": "flir.iof",
+      "path": "flir.iof/flir.iof.dll",
+      "name": "Inventory Organizing Features",
+      "guid": "flir.iof",
+      "version": "1.10.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
       "key": "krane.AdsCameraDistance",
       "path": "krane.AdsCameraDistance.dll",
       "name": "Krane's AdsCameraDistance",

@@ -82,6 +82,7 @@ Mods needing attention (`!`, `⚠`, not in manifest) come first, then the rest a
 | InfectedVariants | 1.3.0 | 1.3.0 | 1.3.0 | 1.3.0 @e5637cf | ? |
 | Instant Insurance | 1.1.2 | - | - | - | ? |
 | InstantTraderDialogs | - | - | - | 1.0.0 @c524d12 | ? |
+| IOF: Inventory Organizing Feature | - | - | - | 1.10.1 | ? |
 | ISB Aishi | 2.0.4 | 2.0.4 | 2.0.4 | 2.0.4 | ? |
 | ISB Special Forces | 2.0.1 | 2.0.1 | 2.0.1 | 2.0.1 | ? |
 | Item Limits Begone | 1.1.0 | - | - | - | ? |
