@@ -1,0 +1,708 @@
+{
+  "kind": "server",
+  "generated": "2026-11-15",
+  "parts": [
+    {
+      "kind": "server",
+      "key": "acidphantasm-bosseshavegpcoins",
+      "path": "acidphantasm-bosseshavegpcoins/acidphantasm-bosseshavegpcoins.dll",
+      "name": "Bosses Have GP Coins",
+      "guid": "com.acidphantasm.bosseshavegpcoins",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-bosseshavelegamedals",
+      "path": "acidphantasm-bosseshavelegamedals/acidphantasm-bosseshavelegamedals.dll",
+      "name": "Bosses Have Lega Medals",
+      "guid": "com.acidphantasm.bosseshavelegamedals",
+      "version": "2.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-botplacementsystem",
+      "path": "acidphantasm-botplacementsystem/acidphantasm-botplacementsystem.dll",
+      "name": "Acid's Bot Placement System",
+      "guid": "com.acidphantasm.botplacementsystem",
+      "version": "2.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-defaultfiremode",
+      "path": "acidphantasm-defaultfiremode/acidphantasm-defaultfiremode.dll",
+      "name": "Default Firemode Fixer",
+      "guid": "com.acidphantasm.defaultfiremode",
+      "version": "2.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-harryhideout",
+      "path": "acidphantasm-harryhideout/acidphantasm-harryhideout.dll",
+      "name": "Harry Hideout",
+      "guid": "com.acidphantasm.harryhideout",
+      "version": "3.1.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-itemlimitsbegone",
+      "path": "acidphantasm-itemlimitsbegone/acidphantasm-itemlimitsbegone.dll",
+      "name": "Item Limits Begone",
+      "guid": "com.acidphantasm.itemlimitsbegone",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-itemvaluation",
+      "path": "acidphantasm-itemvaluation/acidphantasm-itemvaluation.dll",
+      "name": "Item Valuation",
+      "guid": "com.acidphantasm.itemvaluation",
+      "version": "2.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-progressivebotsystem",
+      "path": "acidphantasm-progressivebotsystem/acidphantasm-progressivebotsystem.dll",
+      "name": "Acid's Progressive Bot System",
+      "guid": "com.acidphantasm.progressivebotsystem",
+      "version": "2.4.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-reffriendlyquests",
+      "path": "acidphantasm-reffriendlyquests/acidphantasm-reffriendlyquests.dll",
+      "name": "Ref Friendly Quests",
+      "guid": "com.acidphantasm.reffriendlyquests",
+      "version": "2.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-scorpion",
+      "path": "acidphantasm-scorpion/acidphantasm-scorpion.dll",
+      "name": "Scorpion",
+      "guid": "com.acidphantasm.scorpion",
+      "version": "1.1.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "acidphantasm-stattrack",
+      "path": "acidphantasm-stattrack/acidphantasm-stattrack.dll",
+      "name": "StatTrack™",
+      "guid": "com.acidphantasm.stattrack",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "AllQuestsCheckmarks",
+      "path": "AllQuestsCheckmarks/AllQuestsCheckmarks-Server.dll",
+      "name": "All Quests Checkmarks",
+      "guid": "com.zgfuedkx.allquestscheckmarks",
+      "version": "1.4.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "archangelwtf-contentbackportprestiges",
+      "path": "archangelwtf-contentbackportprestiges/ContentBackportPrestigesServer.dll",
+      "name": "Content Backport - Prestiges",
+      "guid": "wtf.archangel.contentbackportprestiges",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "BackpackGunSlot",
+      "path": "BackpackGunSlot/BackpackGunSlot.dll",
+      "name": "BackpackGunSlot",
+      "guid": "com.20fpsguy.backpackgunslot",
+      "version": "1.1.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "betterkeys",
+      "path": "betterkeys/betterkeys.dll",
+      "name": "BetterKeysNG",
+      "guid": "com.flir.betterkeys",
+      "version": "1.8.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "BetterSuppressors",
+      "path": "BetterSuppressors/BetterSuppressors.dll",
+      "name": "BetterSuppressors",
+      "guid": "com.tominocz.bettersuppressors",
+      "version": "1.0.0 (assembly)",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "BlackDivServer",
+      "path": "BlackDivServer/BlackDivServer.dll",
+      "name": "Black Division [REDACTED] Home",
+      "guid": "com.blackdiv.tacticaltoaster",
+      "version": "1.3.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "BotCallsigns",
+      "path": "BotCallsigns/BotCallsigns.dll",
+      "name": "Bot Callsigns",
+      "guid": "com.harmonyzt.botcallsigns",
+      "version": "2.0.5",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "CraftQueue",
+      "path": "CraftQueue/maschine-CraftQueue.Server.dll",
+      "name": "CraftQueue",
+      "guid": "com.maschine.CraftQueue",
+      "version": "2.4.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "CSGasServer",
+      "path": "CSGasServer/CSGasServer.dll",
+      "name": "CSGas",
+      "guid": "com.manimal.csgas",
+      "version": "2.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "DrakiaXYZ-GildedKeyStorage",
+      "path": "DrakiaXYZ-GildedKeyStorage/DrakiaXYZ-GildedKeyStorage-Server.dll",
+      "name": "Gilded Key Storage",
+      "guid": "xyz.drakia.gildedkeystorage",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "DrakiaXYZ-LiveFleaPrices",
+      "path": "DrakiaXYZ-LiveFleaPrices/DrakiaXYZ-LiveFleaPrices.dll",
+      "name": "Live Flea Prices",
+      "guid": "xyz.drakia.livefleaprices",
+      "version": "2.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ExpandedTaskText",
+      "path": "ExpandedTaskText/ExpandedTaskText.dll",
+      "name": "Expanded Task Text",
+      "guid": "com.friedengineer.ett",
+      "version": "2.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ExtraSpecialSlots",
+      "path": "ExtraSpecialSlots/BlackHawk-ExtraSpecialSlots.Server.dll",
+      "name": "ExtraSpecialSlots",
+      "guid": "com.blackhawk.extraspecialslots",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "fika-server",
+      "path": "fika-server/FikaServer.dll",
+      "name": "server",
+      "guid": "Fika",
+      "version": "2.4.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "GunsmithTrader",
+      "path": "GunsmithTrader/GunsmithTrader.dll",
+      "name": "Gunsmith Trader",
+      "guid": "com.landon.gunsmithtrader",
+      "version": "1.0.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "HideoutWeDeserveTimeRP",
+      "path": "HideoutWeDeserveTimeRP/HideoutWeDeserveTimeRP.dll",
+      "name": "Hideout We Deserve - TimeRP",
+      "guid": "com.garon.hideoutwedeservetimerp",
+      "version": "1.4.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "Increase Climb Height",
+      "path": "Increase Climb Height/IncreaseClimbHeight.dll",
+      "name": "Increase Climb Height",
+      "guid": "redlaser42.IncreaseClimbHeight",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ISB-Aishi",
+      "path": "ISB-Aishi/Aishi.dll",
+      "name": "ISB Aishi",
+      "guid": "com.samc137.aishi",
+      "version": "2.0.4",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ISB-SpecialForces",
+      "path": "ISB-SpecialForces/ISBSpecialForces.dll",
+      "name": "ISB Special Forces",
+      "guid": "com.samc137.isbspecialforces",
+      "version": "2.0.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "KeepMeAlive",
+      "path": "KeepMeAlive/KeepMeAlive.Server.dll",
+      "name": "KeepMeAlive Server",
+      "guid": "KeepMeAliveServer",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "krane-AishiInsuranceDiscount4Server",
+      "path": "krane-AishiInsuranceDiscount4Server/krane.AishiInsuranceDiscount4Server.dll",
+      "name": "Aishi Insurance Discount",
+      "guid": "krane.aishiinsurancediscount",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "krane-FleaCategoryBlock4Server",
+      "path": "krane-FleaCategoryBlock4Server/krane.FleaCategoryBlock4Server.dll",
+      "name": "Flea Category Block",
+      "guid": "krane.fleacategoryblockserver",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "krane-FleaOfferGuard4Server",
+      "path": "krane-FleaOfferGuard4Server/krane.FleaOfferGuard4Server.dll",
+      "name": "Flea Offer Guard",
+      "guid": "krane.fleaofferguardserver",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "krane-InfectedVariants4Server",
+      "path": "krane-InfectedVariants4Server/krane.InfectedVariants4Server.dll",
+      "name": "Infected Variants",
+      "guid": "krane.infectedvariantsserver",
+      "version": "1.3.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "krane-ItemTweaks4Server",
+      "path": "krane-ItemTweaks4Server/krane.ItemTweaks4Server.dll",
+      "name": "Krane's Item Tweaks & Additions (Server)",
+      "guid": "krane.itemtweaks4server",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "krane-PrestigeDogtagFix4Server",
+      "path": "krane-PrestigeDogtagFix4Server/krane.PrestigeDogtagFix4Server.dll",
+      "name": "Prestige Dogtag Fix",
+      "guid": "krane.prestigedogtagfix4server",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "krane-StorylineCleanup4Server",
+      "path": "krane-StorylineCleanup4Server/krane.StorylineCleanup4Server.dll",
+      "name": "Storyline Cleanup",
+      "guid": "krane.storylinecleanup4server",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "LacyPvETweaks",
+      "path": "LacyPvETweaks/LacyPvETweaks.dll",
+      "name": "Lacyway's PvE Tweaks",
+      "guid": "com.lacyway.lpt",
+      "version": "1.3.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "Ledger",
+      "path": "Ledger/Ledger.dll",
+      "name": "Ledger",
+      "guid": "com.zantetsukenar3.ledger",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "LennoxP90-FactoryClassic",
+      "path": "LennoxP90-FactoryClassic/FactoryClassic.Server.dll",
+      "name": "FactoryClassic",
+      "guid": "com.lennoxp90.factoryclassic",
+      "version": "1.2.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "LennoxP90-MapVariants",
+      "path": "LennoxP90-MapVariants/MapVariants.Server.dll",
+      "name": "MapVariants",
+      "guid": "com.lennoxp90.mapvariants",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "Lotus",
+      "path": "Lotus/Lotus.dll",
+      "name": "Lotus",
+      "guid": "com.Luna.LunnayalunaLotus",
+      "version": "1.8.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "Manimal-Halloween2026",
+      "path": "Manimal-Halloween2026/Manimal.Halloween2026.Server.dll",
+      "name": "Halloween2026",
+      "guid": "com.manimal.halloween2026",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ManimalIcebreaker",
+      "path": "ManimalIcebreaker/icebreaker-server.dll",
+      "name": "ManimalIcebreaker",
+      "guid": "com.manimal.icebreaker",
+      "version": "1.1.3",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ManimalInterchange",
+      "path": "ManimalInterchange/ManimalInterchange.Server.dll",
+      "name": "ManimalInterchangeRework",
+      "guid": "com.manimal.interchange",
+      "version": "1.0.8",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ManimalLabsBoiler",
+      "path": "ManimalLabsBoiler/ManimalLabsBoilerServer.dll",
+      "name": "ManimalLabsBoiler",
+      "guid": "com.manimal.labsboiler",
+      "version": "2.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ManimalLighthouse",
+      "path": "ManimalLighthouse/ManimalLighthouse.Server.dll",
+      "name": "ManimalLighthouseRework",
+      "guid": "com.manimal.lighthouse",
+      "version": "1.0.7",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ManimalTerminal",
+      "path": "ManimalTerminal/terminal-server.dll",
+      "name": "ManimalTerminal",
+      "guid": "com.manimal.terminal",
+      "version": "0.2.20",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "Michael-NATOQuartermaster",
+      "path": "Michael-NATOQuartermaster/NATOQuartermaster.dll",
+      "name": "NATO Quartermaster",
+      "guid": "com.michael.spt.natoquartermaster",
+      "version": "1.1.3",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "MoreBotsServer",
+      "path": "MoreBotsServer/MoreBotsServer.dll",
+      "name": "MoreBotsAPI",
+      "guid": "com.morebotsapi.tacticaltoaster",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "mpstark-dynamicmaps",
+      "path": "mpstark-dynamicmaps/mpstark-dynamicmaps.dll",
+      "name": "Dynamic Maps",
+      "guid": "com.mpstark.dynamicmaps",
+      "version": "1.2.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ORBIT",
+      "path": "ORBIT/Orbit.Server.dll",
+      "name": "ORBIT Server",
+      "guid": "com.chazut.orbit.server",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ozen.InstantInsurance",
+      "path": "ozen.InstantInsurance/ozen.InstantInsurance.dll",
+      "name": "Instant Insurance",
+      "guid": "com.ozen.instantinsurance",
+      "version": "1.1.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "PastPresentEventSelector",
+      "path": "PastPresentEventSelector/PastPresentEventSelector.dll",
+      "name": "Past & Present Event Selector",
+      "guid": "com.zezinho.pastpresenteventselector",
+      "version": "1.7.7",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "platinum-theblacklist",
+      "path": "platinum-theblacklist/TheBlacklist.dll",
+      "name": "The Blacklist",
+      "guid": "com.platinum.theblacklist",
+      "version": "3.1.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "QuestCodex",
+      "path": "QuestCodex/QuestCodex.dll",
+      "name": "QuestCodex",
+      "guid": "com.viper.questcodex",
+      "version": "1.11.1 (assembly)",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "RaidReview",
+      "path": "RaidReview/RaidReview.dll",
+      "name": "Raid Review",
+      "guid": "ekky.raidreview",
+      "version": "1.8.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "RandomizzatoreMoreCases-4.0",
+      "path": "RandomizzatoreMoreCases-4.0/RandomizzatoreMoreCases.dll",
+      "name": "MoreCases",
+      "guid": "com.randomizzatore.morecases",
+      "version": "3.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ReceiveAllChats",
+      "path": "ReceiveAllChats/maschine-ReceiveAllChats.Server.dll",
+      "name": "ReceiveAllChats",
+      "guid": "com.maschine.ReceiveAllChats",
+      "version": "2.0.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "RefExtraQuests",
+      "path": "RefExtraQuests/RefExtraQuests.dll",
+      "name": "Ref Extra Quests",
+      "guid": "com.praedlab.refextraquests",
+      "version": "1.9.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "RoguesVRaidersServer",
+      "path": "RoguesVRaidersServer/RoguesVRaidersServer.dll",
+      "name": "RoguesVRaiders",
+      "guid": "com.sipto.roguesvraiders",
+      "version": "1.7.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "RUAFComeHomeServer",
+      "path": "RUAFComeHomeServer/RUAFComeHomeServer.dll",
+      "name": "RUAF Come Home",
+      "guid": "com.ruafcomehome.tacticaltoaster",
+      "version": "1.2.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "sgtlaggyQuestTweaks",
+      "path": "sgtlaggyQuestTweaks/sgtlaggyQuestTweaks.dll",
+      "name": "sgtlaggy's Quest Tweaks",
+      "guid": "com.sgtlaggy.questtweaks",
+      "version": "4.9.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "ShinnisQuestsBackport",
+      "path": "ShinnisQuestsBackport/ShinnisQuestsBackport.dll",
+      "name": "Shinni's 1.0 QuestsBackport",
+      "guid": "com.shinniuwu.questsbackport",
+      "version": "0.3.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "SitOnMyFace",
+      "path": "SitOnMyFace/SitOnMyFace.dll",
+      "name": "SitOnMyFace",
+      "guid": "com.4nub15.sitonmyface",
+      "version": "0.1.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "Solarint-SAIN-ServerMod",
+      "path": "Solarint-SAIN-ServerMod/SAINServerMod.dll",
+      "name": "SAIN",
+      "guid": "me.sol.sain",
+      "version": "4.5.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "TerminalCommander",
+      "path": "TerminalCommander/TerminalCommander.dll",
+      "name": "TerminalCommander",
+      "guid": "com.mizmii.terminalcommander",
+      "version": "1.2.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "Tyfon.HideoutInProgress.Server",
+      "path": "Tyfon.HideoutInProgress.Server/Tyfon.HideoutInProgress.Server.dll",
+      "name": "Hideout In Progress",
+      "guid": "com.tyfon.hideoutinprogress",
+      "version": "3.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "Tyfon.UIFixes.Server",
+      "path": "Tyfon.UIFixes.Server/Tyfon.UIFixes.Server.dll",
+      "name": "UI Fixes",
+      "guid": "com.tyfon.uifixes",
+      "version": "6.0.4",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "untargh-server",
+      "path": "untargh-server/untargh-server.dll",
+      "name": "UNTAR Go Home!",
+      "guid": "com.untargh.tacticaltoaster",
+      "version": "3.2.1",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "VisitAPI-Server",
+      "path": "VisitAPI-Server/VisitAPI-Server.dll",
+      "name": "VisitAPI-Server",
+      "guid": "com.sora.visitapi.server",
+      "version": "1.3.7",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "WolfiksHeavyTrooperMasks",
+      "path": "WolfiksHeavyTrooperMasks/WolfiksHeavyTroopers.dll",
+      "name": "Wolfiks Heavy Troopers",
+      "guid": "com.hood.wolfiksheavytroopers",
+      "version": "1.2.0",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "WTT-Armory",
+      "path": "WTT-Armory/WTT-Armory.dll",
+      "name": "WTT-Armory",
+      "guid": "com.wtt.armory",
+      "version": "2.0.5",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "WTT-Artem",
+      "path": "WTT-Artem/WTT-Artem.dll",
+      "name": "Artem",
+      "guid": "com.crackbone.artem-wtt",
+      "version": "3.0.2",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "WTT-ContentBackport",
+      "path": "WTT-ContentBackport/WTT-ContentBackport.dll",
+      "name": "WTT-ContentBackport",
+      "guid": "com.wtt.contentbackport",
+      "version": "2.0.7",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "WTT-ServerCommonLib",
+      "path": "WTT-ServerCommonLib/WTT-ServerCommonLib.dll",
+      "name": "WTT-ServerCommonLib",
+      "guid": "com.wtt.commonlib",
+      "version": "3.0.8",
+      "link": null
+    },
+    {
+      "kind": "server",
+      "key": "[SVM] Server Value Modifier",
+      "path": "[SVM] Server Value Modifier/ServerValueModifier.dll",
+      "name": "SVM",
+      "guid": "fika.ghostfenixx.svm",
+      "version": "2.2.3",
+      "link": null
+    }
+  ]
+}

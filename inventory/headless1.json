@@ -1,0 +1,564 @@
+{
+  "kind": "bepinex",
+  "generated": "2026-11-15",
+  "parts": [
+    {
+      "kind": "plugin",
+      "key": "BlackDiv",
+      "path": "BlackDiv/BlackDiv.dll",
+      "name": "BlackDiv",
+      "guid": "com.blackdiv.tacticaltoaster",
+      "version": "1.3.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "CSGas",
+      "path": "CSGas/CSGasClient.dll",
+      "name": "Manimal-CSGas",
+      "guid": "com.manimal.csgas",
+      "version": "2.0.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "DrakiaXYZ-BigBrain",
+      "path": "DrakiaXYZ-BigBrain.dll",
+      "name": "DrakiaXYZ-BigBrain",
+      "guid": "xyz.drakia.bigbrain",
+      "version": "1.5.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "DrakiaXYZ-GildedKeyStorage-Client",
+      "path": "DrakiaXYZ-GildedKeyStorage-Client.dll",
+      "name": "DrakiaXYZ-GildedKeyStorage",
+      "guid": "xyz.drakia.gildedkeystorage",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "DrakiaXYZ-Waypoints",
+      "path": "DrakiaXYZ-Waypoints/DrakiaXYZ-Waypoints.dll",
+      "name": "DrakiaXYZ-Waypoints",
+      "guid": "xyz.drakia.waypoints",
+      "version": "1.9.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "Fika",
+      "path": "Fika/Fika.Core.dll",
+      "name": "Fika.Core",
+      "guid": "com.fika.core",
+      "version": "2.4.6",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "Fika",
+      "path": "Fika/Fika.Headless.dll",
+      "name": "Fika.Headless",
+      "guid": "com.fika.headless",
+      "version": "1.5.3",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ISBAishiPlugin",
+      "path": "ISBAishiPlugin/AishiKeysV2.dll",
+      "name": "AishiMasterKeyFunction",
+      "guid": "com.samc137.aishi",
+      "version": "2.0.4",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ISBSpecialForcesPlugin",
+      "path": "ISBSpecialForcesPlugin/ISB-SpecialForces.dll",
+      "name": "ISB Special Forces",
+      "guid": "com.samc137.isbspecialforces",
+      "version": "2.0.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ISBSpecialForcesPlugin",
+      "path": "ISBSpecialForcesPlugin/ISBNotify.dll",
+      "name": "ISB SOF Notifier",
+      "guid": "com.samc137.ISBinfo",
+      "version": "2.0.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ISBSpecialForcesPlugin",
+      "path": "ISBSpecialForcesPlugin/ISBSOF_Extras.dll",
+      "name": "ISB SOF: Immersion Systems Plugin",
+      "guid": "com.samc137.isbsofextras",
+      "version": "2.0.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "KeepMeAlive",
+      "path": "KeepMeAlive/KeepMeAlive.dll",
+      "name": "KeepMeAlive",
+      "guid": "com.keepmealive.fika",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "LennoxP90-FactoryClassic",
+      "path": "LennoxP90-FactoryClassic/FactoryClassic.Client.dll",
+      "name": "FactoryClassic",
+      "guid": "com.lennoxp90.factoryclassic",
+      "version": "1.2.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "LennoxP90-MapVariants",
+      "path": "LennoxP90-MapVariants/MapVariants.Client.dll",
+      "name": "MapVariants",
+      "guid": "com.lennoxp90.mapvariants",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "Manimal-Halloween2026",
+      "path": "Manimal-Halloween2026/Manimal.Halloween2026.Client.dll",
+      "name": "Manimal-Halloween2026",
+      "guid": "com.manimal.halloween2026",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "Manimal-LabsBoiler",
+      "path": "Manimal-LabsBoiler/ManimalLabsBoiler.dll",
+      "name": "Manimal-LabsBoiler",
+      "guid": "com.manimal.labsboiler",
+      "version": "2.0.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ManimalIcebreaker",
+      "path": "ManimalIcebreaker/ManimalIcebreakerClient.dll",
+      "name": "Manimal-Icebreaker",
+      "guid": "com.manimal.icebreaker",
+      "version": "1.1.3",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ManimalIcebreaker",
+      "path": "ManimalIcebreaker/ManimalIcebreakerFika.dll",
+      "name": "Manimal-IcebreakerFika",
+      "guid": "com.manimal.icebreaker.fika",
+      "version": "1.1.3",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ManimalInterchange",
+      "path": "ManimalInterchange/ManimalInterchange.dll",
+      "name": "Manimal-InterchangeRework",
+      "guid": "com.manimal.interchange",
+      "version": "1.0.8",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ManimalLighthouse",
+      "path": "ManimalLighthouse/ManimalLighthouse.dll",
+      "name": "Manimal-LighthouseRework",
+      "guid": "com.manimal.lighthouse",
+      "version": "1.0.7",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ManimalTerminal",
+      "path": "ManimalTerminal/ManimalTerminalClient.dll",
+      "name": "Manimal-Terminal",
+      "guid": "com.manimal.terminal",
+      "version": "0.2.20",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ManimalTerminal",
+      "path": "ManimalTerminal/ManimalTerminalFika.dll",
+      "name": "Manimal-TerminalFika",
+      "guid": "com.manimal.terminal.fika",
+      "version": "0.2.20",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "MoreBotsPlugin",
+      "path": "MoreBotsPlugin/MoreBotsPlugin.dll",
+      "name": "MoreBotsAPI",
+      "guid": "com.morebotsapi.tacticaltoaster",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ORBIT",
+      "path": "ORBIT/ORBIT.dll",
+      "name": "ORBIT",
+      "guid": "com.chazut.orbit",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "Orbit.Fika",
+      "path": "Orbit.Fika/Orbit.Fika.dll",
+      "name": "ORBIT Fika Bridge",
+      "guid": "com.chazut.orbit.fika",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "PastPresentEventSelector",
+      "path": "PastPresentEventSelector/PastPresentEventSelector.Client.dll",
+      "name": "zezinho-PastPresentEventSelector",
+      "guid": "com.zezinho.pastpresenteventselector",
+      "version": "1.7.7",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "RUAFComeHomePlugin",
+      "path": "RUAFComeHomePlugin/RUAFComeHomePlugin.dll",
+      "name": "RUAFComeHome",
+      "guid": "com.ruafcomehome.tacticaltoaster",
+      "version": "1.2.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "RaiRai.ColorConverterAPI",
+      "path": "RaiRai.ColorConverterAPI.dll",
+      "name": "ColorConverterAPI",
+      "guid": "com.rairai.colorconverterapi.eft",
+      "version": "1.2.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "RoguesVRaiders",
+      "path": "RoguesVRaiders/RoguesVRaiders.dll",
+      "name": "Rogues V Raiders",
+      "guid": "com.sipto.roguesvraiders",
+      "version": "1.7.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "SAIN",
+      "path": "SAIN/SAIN.dll",
+      "name": "SAIN",
+      "guid": "me.sol.sain",
+      "version": "4.5.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "Tyfon.UIFixes",
+      "path": "Tyfon.UIFixes.dll",
+      "name": "Tyfon.UIFixes",
+      "guid": "com.tyfon.uifixes",
+      "version": "6.0.4",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "UNTARGHPlugin",
+      "path": "UNTARGHPlugin/UNTARGHPlugin.dll",
+      "name": "TacticalToaster-UNTARGH",
+      "guid": "com.untargh.tacticaltoaster",
+      "version": "3.2.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "UnityToolkit",
+      "path": "UnityToolkit/UnityToolkit.dll",
+      "name": "Unity Toolkit",
+      "guid": "com.arys.unitytoolkit",
+      "version": "2.0.2",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "UseItemsAnywhere",
+      "path": "UseItemsAnywhere/UseItemsAnywhere.dll",
+      "name": "Use Items Anywhere",
+      "guid": "com.cj.useFromAnywhere",
+      "version": "2.1.6",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "UseItemsAnywhere",
+      "path": "UseItemsAnywhere/UseItemsAnywhereFika.dll",
+      "name": "Use Items Anywhere Fika",
+      "guid": "com.cj.UseItemsAnywhereFika",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "VisitAPI",
+      "path": "VisitAPI/VisitAPI.dll",
+      "name": "VisitAPI",
+      "guid": "com.sora.visitapi",
+      "version": "1.3.7",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "WTT-ArmoryClient",
+      "path": "WTT-ArmoryClient/WTT-ArmoryClient.dll",
+      "name": "WTT-Armory",
+      "guid": "com.wtt.armory",
+      "version": "2.0.5",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "WTT-ClientCommonLib",
+      "path": "WTT-ClientCommonLib/WTT-ClientCommonLib.dll",
+      "name": "WTT-ClientCommonLib",
+      "guid": "com.wtt.commonlib",
+      "version": "3.0.8",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "WTT-ContentBackportClient",
+      "path": "WTT-ContentBackportClient/WTT-ContentBackportClient.dll",
+      "name": "WTT-ContentBackportClient",
+      "guid": "com.wtt.contentbackport",
+      "version": "2.0.7",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "acidphantasm-botplacementsystem",
+      "path": "acidphantasm-botplacementsystem/acidphantasm-botplacementsystem.dll",
+      "name": "acidphantasm-botplacementsystem",
+      "guid": "com.acidphantasm.botplacementsystem",
+      "version": "2.1.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "archangelwtf-contentbackportprestiges",
+      "path": "archangelwtf-contentbackportprestiges/ContentBackportPrestigesClient.dll",
+      "name": "Content Backport - Prestiges",
+      "guid": "wtf.archangel.contentbackportprestiges",
+      "version": "1.1.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "krane.InfectedVariants",
+      "path": "krane.InfectedVariants.dll",
+      "name": "Krane's InfectedVariants",
+      "guid": "com.krane.infectedvariants",
+      "version": "1.3.0",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "ozen.MagCheckInterrupt",
+      "path": "ozen.MagCheckInterrupt/ozen.MagCheckInterrupt.dll",
+      "name": "Magazine Check Interrupt",
+      "guid": "com.ozen.magcheckinterrupt",
+      "version": "1.1.1",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "spt",
+      "path": "spt/ConfigurationManager/ConfigurationManager.dll",
+      "name": "Configuration Manager",
+      "guid": "com.bepis.bepinex.configurationmanager",
+      "version": "18.4",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "spt",
+      "path": "spt/spt-core.dll",
+      "name": "SPT.Core",
+      "guid": "com.SPT.core",
+      "version": "4.1.6",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "spt",
+      "path": "spt/spt-custom.dll",
+      "name": "SPT.Custom",
+      "guid": "com.SPT.custom",
+      "version": "4.1.6",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "spt",
+      "path": "spt/spt-debugging.dll",
+      "name": "SPT.Debugging",
+      "guid": "com.SPT.debugging",
+      "version": "4.1.6",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "spt",
+      "path": "spt/spt-singleplayer.dll",
+      "name": "SPT.Singleplayer",
+      "guid": "com.SPT.singleplayer",
+      "version": "4.1.6",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "tarkin-ladders",
+      "path": "tarkin-ladders/tarkin.ladders.bep.dll",
+      "name": "tarkin.ladders.bep",
+      "guid": "com.tarkin.ladders",
+      "version": "1.0.4",
+      "link": null
+    },
+    {
+      "kind": "plugin",
+      "key": "tarkin-ladders",
+      "path": "tarkin-ladders/tarkin.ladders.fika.dll",
+      "name": "tarkin.ladders.fika",
+      "guid": "com.tarkin.ladders.fika",
+      "version": "1.0.1",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "BlackDiv",
+      "path": "BlackDiv/BlackDiv.dll",
+      "name": "BlackDiv Prepatch",
+      "guid": "com.blackdiv.tacticaltoaster",
+      "version": "1.3.1",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "FixPluginTypesSerialization",
+      "path": "FixPluginTypesSerialization.dll",
+      "name": "FixPluginTypesSerialization",
+      "guid": null,
+      "version": "1.0.0+784e45ae02f1c3509d261f0e9e1695b396ba6f8c",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "ISBSpecialForces",
+      "path": "ISBSpecialForces.dll",
+      "name": "ISBSpecialForces",
+      "guid": "com.samc137.isbspecialforces",
+      "version": "2.0.1",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "ManimalTerminalPrepatch",
+      "path": "ManimalTerminalPrepatch/ManimalTerminalPrepatch.dll",
+      "name": "ManimalTerminalPrepatch",
+      "guid": null,
+      "version": "0.2.20+1d45c1c92910a202d2bfd34e671e24c67df1d833",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "MoreBotsPrepatch",
+      "path": "MoreBotsPrepatch/MoreBotsPrepatch.dll",
+      "name": "MoreBotsPrepatch",
+      "guid": "com.morebotsapiprepatch.tacticaltoaster",
+      "version": "2.1.1",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "PastPresentEventSelector",
+      "path": "PastPresentEventSelector/PastPresentEventSelector.Prepatch.dll",
+      "name": "PastPresentEventSelector.Prepatch",
+      "guid": null,
+      "version": "1.7.7+fbd32b38b7b24dd1e172ce7dc820a48324859066",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "RUAFComeHome",
+      "path": "RUAFComeHome/RUAFComeHome.dll",
+      "name": "RUAFComeHome Prepatch",
+      "guid": "com.ruafcomehome.tacticaltoaster",
+      "version": "1.2.1",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "UNTARGHPrepatch",
+      "path": "UNTARGHPrepatch/UNTARGHPrepatch.dll",
+      "name": "TacticalToaster-UNTARGHPrePatch",
+      "guid": "com.untarghprepatch.tacticaltoaster",
+      "version": "3.2.1",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "UnityToolkit",
+      "path": "UnityToolkit/System.Runtime.CompilerServices.Unsafe.dll",
+      "name": "System.Runtime.CompilerServices.Unsafe",
+      "guid": null,
+      "version": "6.1.2",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "UnityToolkit",
+      "path": "UnityToolkit/UnityToolkit-Prepatcher.dll",
+      "name": "UnityToolkit-Prepatcher",
+      "guid": null,
+      "version": "2.0.2",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "WTT-ContentBackportPatcher",
+      "path": "WTT-ContentBackportPatcher/WTT-ContentBackportPatcher.dll",
+      "name": "Content Backport Preloader Patch",
+      "guid": "com.wtt.contentbackport",
+      "version": "2.0.7",
+      "link": null
+    },
+    {
+      "kind": "patcher",
+      "key": "spt-prepatch",
+      "path": "spt-prepatch.dll",
+      "name": "spt-prepatch",
+      "guid": null,
+      "version": "4.1.6+d52d9c99836b6d7dc5ad93852cd8032158df0f9c",
+      "link": null
+    }
+  ]
+}

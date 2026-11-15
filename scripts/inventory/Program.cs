@@ -9,13 +9,32 @@ using System.Reflection.PortableExecutable;
 using System.Diagnostics;
 using System.Text;
 
-if (args.Length < 2) { Console.Error.WriteLine("usage: Inventory bepinex|server <dir>"); return 1; }
+if (args.Length >= 4 && args[0] == "matrix") return Matrix.Run(args[1], args[2], args[3]);
+if (args.Length < 2) { Console.Error.WriteLine("usage: Inventory bepinex|server <dir> [--json] | matrix <mods.json> <snapshot dir> <footer.md>"); return 1; }
 var dir = Path.GetFullPath(args[1]);
 if (!Directory.Exists(dir)) { Console.Error.WriteLine("no such dir: " + dir); return 1; }
+Out.Json = args.Contains("--json");
 if (args[0] == "bepinex") Bep.Run(dir);
 else if (args[0] == "server") Srv.Run(dir);
 else return 1;
+if (Out.Json) Out.Flush(args[0] == "server" ? "server" : "bepinex");
 return 0;
+
+record Part(string kind, string key, string path, string? name, string? guid, string? version, string? link);
+record Snap(string kind, string generated, List<Part> parts);
+
+static class Out
+{
+    public static bool Json;
+    static readonly List<Part> parts = new();
+    public static void Md(string s = "") { if (!Json) Console.WriteLine(s); }
+    public static void Add(string kind, string key, string path, string? name, string? guid, string? version, string? link) =>
+        parts.Add(new Part(kind, key, path, Clean(name), Clean(guid), Clean(version), link));
+    static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) || s == "?" || s == "-" ? null : s;
+    public static void Flush(string kind) =>
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new Snap(kind, DateTime.Now.ToString("yyyy-MM-dd"), parts),
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+}
 
 static class Util
 {
@@ -83,7 +102,7 @@ static class Util
     }
 
     // Marks symlinked krane plugins with the repo commit of the target plugin dir.
-    public static string LinkNote(string file, string root)
+    public static string? LinkCommit(string file, string root)
     {
         try
         {
@@ -96,14 +115,16 @@ static class Util
                 if (target != null)
                 {
                     var full = Path.GetFullPath(target, Path.GetDirectoryName(cur)!);
-                    return " (symlink @ " + Commit(full) + ")";
+                    return Commit(full);
                 }
                 cur = Path.GetDirectoryName(cur);
             }
         }
         catch { }
-        return "";
+        return null;
     }
+
+    public static string LinkNote(string file, string root) { var c = LinkCommit(file, root); return c == null ? "" : " (symlink @ " + c + ")"; }
 
     static string Commit(string target)
     {
@@ -129,17 +150,17 @@ static class Bep
 {
     public static void Run(string root)
     {
-        Console.WriteLine("**Plugins**\n");
-        Console.WriteLine("| Folder/File | Name | GUID | Version |\n|---|---|---|---|");
+        Out.Md("**Plugins**\n");
+        Out.Md("| Folder/File | Name | GUID | Version |\n|---|---|---|---|");
         Scan(Path.Combine(root, "plugins"), root, false);
-        Console.WriteLine("\n**Patchers**\n");
-        Console.WriteLine("| Folder/File | Name | GUID | Version |\n|---|---|---|---|");
+        Out.Md("\n**Patchers**\n");
+        Out.Md("| Folder/File | Name | GUID | Version |\n|---|---|---|---|");
         Scan(Path.Combine(root, "patchers"), root, true);
     }
 
     static void Scan(string dir, string root, bool patchers)
     {
-        if (!Directory.Exists(dir)) { Console.WriteLine("| (absent) | | | |"); return; }
+        if (!Directory.Exists(dir)) { Out.Md("| (absent) | | | |"); return; }
         var files = Directory.EnumerateFiles(dir, "*.dll", SearchOption.AllDirectories).OrderBy(f => f, StringComparer.Ordinal).ToList();
         int libs = 0;
         foreach (var f in files)
@@ -158,20 +179,28 @@ static class Bep
                     if (a is { Count: >= 3 }) found.Add((a[0], a[1], a[2]));
                 }
             var note = Util.LinkNote(f, root);
+            var link = Util.LinkCommit(f, root);
+            var kind = patchers ? "patcher" : "plugin";
+            var seg = rel.Split(Path.DirectorySeparatorChar)[0];
+            var key = seg.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? seg[..^4] : seg;
             if (found.Count > 0)
                 foreach (var (g, n, v) in found)
-                    Console.WriteLine($"| {Util.Esc(rel)}{note} | {Util.Esc(n)} | {Util.Esc(g)} | {Util.Esc(v)} |");
+                {
+                    Out.Md($"| {Util.Esc(rel)}{note} | {Util.Esc(n)} | {Util.Esc(g)} | {Util.Esc(v)} |");
+                    Out.Add(kind, key, rel, n, g, v, link);
+                }
             else if (patchers)
             {
                 var an = r.GetString(r.GetAssemblyDefinition().Name);
                 var v = Util.AsmAttr(r, "AssemblyInformationalVersionAttribute") ?? Util.AsmAttr(r, "AssemblyFileVersionAttribute")
                         ?? r.GetAssemblyDefinition().Version.ToString();
                 var av = r.GetAssemblyDefinition().Version.ToString();
-                Console.WriteLine($"| {Util.Esc(rel)}{note} | {Util.Esc(an)} | - | {Util.Esc(v)} (asm {av}) |");
+                Out.Md($"| {Util.Esc(rel)}{note} | {Util.Esc(an)} | - | {Util.Esc(v)} (asm {av}) |");
+                Out.Add(kind, key, rel, an, null, v, link);
             }
             else libs++;
         }
-        if (libs > 0) Console.WriteLine($"| _{libs} other dll(s) without BepInPlugin (libraries/native)_ | | | |");
+        if (libs > 0) Out.Md($"| _{libs} other dll(s) without BepInPlugin (libraries/native)_ | | | |");
     }
 }
 
@@ -187,7 +216,7 @@ static class Srv
         foreach (var f in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
             if (f.GetValue(null) is OpCode oc) ops[oc.Value] = oc;
 
-        Console.WriteLine("| Folder/File | Name | GUID | Version | Author | SPT target |\n|---|---|---|---|---|---|");
+        Out.Md("| Folder/File | Name | GUID | Version | Author | SPT target |\n|---|---|---|---|---|---|");
         foreach (var mod in Directory.EnumerateDirectories(root).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
         {
             var folder = Path.GetFileName(mod);
@@ -200,7 +229,8 @@ static class Srv
                 var m = FindMeta(r, pe!);
                 if (m == null) continue;
                 rows++;
-                Console.WriteLine($"| {Util.Esc(folder)}{Util.Esc(Path.GetRelativePath(mod, f) == Path.GetFileName(f) ? "/" + Path.GetFileName(f) : "/" + Path.GetRelativePath(mod, f))}{Util.LinkNote(f, root)} | {Util.Esc(m.Name)} | {Util.Esc(m.Guid)} | {Util.Esc(m.Version)} | {Util.Esc(m.Author)} | {Util.Esc(m.Spt)} |");
+                Out.Add("server", folder, Path.GetRelativePath(root, f), m.Name, m.Guid, m.Version, Util.LinkCommit(f, root));
+                Out.Md($"| {Util.Esc(folder)}{Util.Esc(Path.GetRelativePath(mod, f) == Path.GetFileName(f) ? "/" + Path.GetFileName(f) : "/" + Path.GetRelativePath(mod, f))}{Util.LinkNote(f, root)} | {Util.Esc(m.Name)} | {Util.Esc(m.Guid)} | {Util.Esc(m.Version)} | {Util.Esc(m.Author)} | {Util.Esc(m.Spt)} |");
             }
             if (rows > 0) continue;
             // fallback: package.json / mod.json
@@ -209,7 +239,8 @@ static class Srv
             {
                 string t = File.ReadAllText(pj);
                 string? J(string k) { var mt = System.Text.RegularExpressions.Regex.Match(t, "\"" + k + "\"\\s*:\\s*\"([^\"]*)\""); return mt.Success ? mt.Groups[1].Value : null; }
-                Console.WriteLine($"| {Util.Esc(folder)}/{Path.GetFileName(pj)} | {Util.Esc(J("name"))} | {Util.Esc(J("modGuid") ?? J("guid"))} | {Util.Esc(J("version"))} | {Util.Esc(J("author"))} | {Util.Esc(J("sptVersion") ?? J("akiVersion"))} |");
+                Out.Add("server", folder, folder + "/" + Path.GetFileName(pj), J("name"), J("modGuid") ?? J("guid"), J("version"), null);
+                Out.Md($"| {Util.Esc(folder)}/{Path.GetFileName(pj)} | {Util.Esc(J("name"))} | {Util.Esc(J("modGuid") ?? J("guid"))} | {Util.Esc(J("version"))} | {Util.Esc(J("author"))} | {Util.Esc(J("sptVersion") ?? J("akiVersion"))} |");
                 continue;
             }
             // fallback: any dll file/assembly version
@@ -221,7 +252,8 @@ static class Srv
                 using var _ = pe;
                 if (r != null) fv = (Util.AsmAttr(r, "AssemblyInformationalVersionAttribute") ?? r.GetAssemblyDefinition().Version.ToString()) + " (assembly, no metadata type)";
             }
-            Console.WriteLine($"| {Util.Esc(folder)} | ? | ? | {Util.Esc(fv)} | ? | ? |");
+            Out.Add("server", folder, folder, null, null, fv, null);
+            Out.Md($"| {Util.Esc(folder)} | ? | ? | {Util.Esc(fv)} | ? | ? |");
         }
     }
 
@@ -335,5 +367,144 @@ static class Srv
                 if (!props.ContainsKey(k)) props[k] = cur ?? lastStr;
             }
         }
+    }
+}
+
+// Renders INVENTORY.md from per-device snapshots + the intent manifest (mods.json).
+static class Matrix
+{
+    record Ids(List<string>? server, List<string>? client);
+    record Mod(string name, Ids ids, List<string> targets);
+    record Manifest(List<Mod> mods);
+
+    static readonly (string id, string title, string target)[] Devices =
+    {
+        ("server", "Server", "server"), ("headless1", "Headless 1", "headless"), ("headless2", "Headless 2", "headless"),
+        ("tarmantria", "tarmantria", "clients"), ("tariognatha", "tariognatha", "clients"),
+    };
+
+    static string Ver(string? v) => string.IsNullOrEmpty(v) ? "?" : v.Split('+')[0].Split(' ')[0];
+
+    sealed class Row
+    {
+        public string Name = ""; public bool Unknown; public string[] Cells = new string[5]; public bool Attention;
+        public List<string> Missing = new(), Extra = new();
+    }
+
+    public static int Run(string manifestPath, string snapDir, string footerPath)
+    {
+        var jo = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true, ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip };
+        var man = System.Text.Json.JsonSerializer.Deserialize<Manifest>(File.ReadAllText(manifestPath), jo)!;
+        var snaps = new Snap?[Devices.Length];
+        for (int d = 0; d < Devices.Length; d++)
+        {
+            var p = Path.Combine(snapDir, Devices[d].id + ".json");
+            if (File.Exists(p)) snaps[d] = System.Text.Json.JsonSerializer.Deserialize<Snap>(File.ReadAllText(p), jo);
+        }
+
+        // id lookup per side ("server" / "client"), case-insensitive
+        var lookup = new Dictionary<string, int>[] { new(StringComparer.OrdinalIgnoreCase), new(StringComparer.OrdinalIgnoreCase) };
+        for (int m = 0; m < man.mods.Count; m++)
+            for (int side = 0; side < 2; side++)
+                foreach (var id in (side == 0 ? man.mods[m].ids.server : man.mods[m].ids.client) ?? new())
+                {
+                    if (lookup[side].TryGetValue(id, out var other) && other != m)
+                        Console.Error.WriteLine($"warning: id '{id}' claimed by both '{man.mods[other].name}' and '{man.mods[m].name}'");
+                    lookup[side][id] = m;
+                }
+
+        // matched[mod][device] = parts; unknown[key] = (name, parts per device)
+        var matched = new List<Part>[man.mods.Count, Devices.Length];
+        for (int m = 0; m < man.mods.Count; m++) for (int d = 0; d < Devices.Length; d++) matched[m, d] = new();
+        var unknown = new Dictionary<string, (string name, List<Part>[] parts)>(StringComparer.OrdinalIgnoreCase);
+        for (int d = 0; d < Devices.Length; d++)
+        {
+            if (snaps[d] == null) continue;
+            int side = d == 0 ? 0 : 1;
+            foreach (var part in snaps[d]!.parts)
+            {
+                // GUID first (splits mods sharing a folder, e.g. Fika.Core / Fika.Headless), then folder/file key
+                int m = part.guid != null && lookup[side].TryGetValue(part.guid, out var a) ? a
+                      : lookup[side].TryGetValue(part.key, out var b) ? b : -1;
+                if (m >= 0) { matched[m, d].Add(part); continue; }
+                var uk = part.guid ?? part.key;
+                if (!unknown.TryGetValue(uk, out var u))
+                    unknown[uk] = u = (part.name ?? part.key, Devices.Select(_ => new List<Part>()).ToArray());
+                u.parts[d].Add(part);
+            }
+        }
+
+        string Cell(List<Part> parts)
+        {
+            var vs = parts.Select(p => Ver(p.version)).Distinct().ToList();
+            var s = string.Join('/', vs);
+            var links = parts.Select(p => p.link).Where(l => l != null).Distinct().ToList();
+            return links.Count > 0 ? s + " @" + string.Join('/', links) : s;
+        }
+
+        var rows = new List<Row>();
+        var usedMods = new HashSet<int>();
+        for (int m = 0; m < man.mods.Count; m++)
+        {
+            var mod = man.mods[m];
+            var row = new Row { Name = mod.name };
+            for (int d = 0; d < Devices.Length; d++)
+            {
+                bool intended = mod.targets.Contains(Devices[d].target, StringComparer.OrdinalIgnoreCase);
+                var parts = matched[m, d];
+                if (snaps[d] == null) { row.Cells[d] = "?"; continue; }
+                if (parts.Count > 0) usedMods.Add(m);
+                if (parts.Count > 0 && intended) row.Cells[d] = Cell(parts);
+                else if (parts.Count > 0) { row.Cells[d] = Cell(parts) + " ⚠"; row.Extra.Add(Devices[d].title); }
+                else if (intended) { row.Cells[d] = "!"; row.Missing.Add(Devices[d].title); }
+                else row.Cells[d] = "-";
+            }
+            row.Attention = row.Missing.Count + row.Extra.Count > 0;
+            rows.Add(row);
+        }
+        foreach (var (uk, u) in unknown)
+        {
+            var row = new Row { Name = u.name + " _(not in manifest)_", Unknown = true, Attention = true };
+            for (int d = 0; d < Devices.Length; d++)
+                row.Cells[d] = snaps[d] == null ? "?" : u.parts[d].Count > 0 ? Cell(u.parts[d]) : "-";
+            rows.Add(row);
+        }
+        for (int m = 0; m < man.mods.Count; m++)
+            if (!usedMods.Contains(m) && snaps.Any(s => s != null))
+                Console.Error.WriteLine($"warning: manifest mod '{man.mods[m].name}' matches nothing on any device");
+
+        rows = rows.OrderBy(r => r.Attention ? 0 : 1).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
+
+        var sb = new StringBuilder();
+        string E(string s) => s.Replace("|", "\\|");
+        sb.AppendLine("# SPT mod inventory\n");
+        sb.AppendLine("Generated: " + DateTime.Now.ToString("yyyy-MM-dd") + " (generated file, do not edit). Source: installed files only (assembly metadata, no logs, nothing loaded).\n");
+        sb.AppendLine("Snapshots: " + string.Join(", ", Devices.Select((dv, i) => dv.title + " " + (snaps[i]?.generated ?? "none"))) + ".\n");
+        sb.AppendLine("Regenerate: `scripts/inventory.sh all` (read-only rsync from taragarmr, this machine's snapshot, then the matrix). `scripts/inventory.sh matrix` re-renders from the stored snapshots (`inventory/*.json`) and the intent manifest `scripts/inventory/mods.json`. tariognatha adds its own snapshot: on that machine `git pull`, `scripts/inventory.sh all` (or `scripts/inventory.sh local --json > inventory/tariognatha.json`), then commit `inventory/tariognatha.json` and `INVENTORY.md`. Needs `dotnet` 10 or `nix` (see `scripts/inventory/README.md`).\n");
+        sb.AppendLine("## Legend\n");
+        sb.AppendLine("Server column: version of the server part. Device columns: version of the client plugin(s) and patchers. Differing versions among a mod's parts on one device show as `a/b` (often companion plugins or bundled libraries with their own version). Symlinked krane plugins add `@<commit>` (last repo commit touching the plugin).\n");
+        sb.AppendLine("| Cell | Meaning |\n|---|---|\n| `1.2.3` | intended and installed |\n| `!` | intended but missing |\n| `-` | not intended (e.g. server only or client only) and absent |\n| `1.2.3 ⚠` | installed but not intended on that device |\n| `?` | no snapshot for that device yet |\n");
+        sb.AppendLine("Intent comes from `scripts/inventory/mods.json` (targets `server`, `headless` for both headless clients, `clients` for tarmantria and tariognatha). Mods not in the manifest are flagged _(not in manifest)_; classify them there.\n");
+        sb.AppendLine("## Matrix\n");
+        sb.AppendLine("Mods needing attention (`!`, `⚠`, not in manifest) come first, then the rest alphabetically.\n");
+        sb.AppendLine("| Mod | " + string.Join(" | ", Devices.Select(d => d.title)) + " |");
+        sb.AppendLine("|---|" + string.Join("|", Devices.Select(_ => "---")) + "|");
+        foreach (var r in rows) sb.AppendLine("| " + E(r.Name).Replace("\\_", "_") + " | " + string.Join(" | ", r.Cells.Select(E)) + " |");
+        sb.AppendLine("\n## Attention\n");
+        var att = rows.Where(r => r.Attention).ToList();
+        if (att.Count == 0) sb.AppendLine("Nothing.");
+        foreach (var r in att.Where(r => r.Missing.Count > 0))
+            sb.AppendLine($"- `!` missing: {r.Name} on {string.Join(", ", r.Missing)}");
+        foreach (var r in att.Where(r => r.Extra.Count > 0))
+            sb.AppendLine($"- `⚠` unexpected: {r.Name} on {string.Join(", ", r.Extra)}");
+        foreach (var r in att.Where(r => r.Unknown))
+            sb.AppendLine($"- not in manifest: {r.Name.Replace(" _(not in manifest)_", "")} (present on {string.Join(", ", Devices.Where((_, i) => r.Cells[i] != "-" && r.Cells[i] != "?").Select(d => d.title))})");
+        sb.AppendLine();
+        if (File.Exists(footerPath)) sb.Append(File.ReadAllText(footerPath));
+
+        Console.Write(sb.ToString());
+        var unk = rows.Where(r => r.Unknown).Select(r => r.Name.Replace(" _(not in manifest)_", "")).ToList();
+        if (unk.Count > 0) Console.Error.WriteLine($"warning: {unk.Count} mod(s) not in manifest: {string.Join("; ", unk)}");
+        return 0;
     }
 }
