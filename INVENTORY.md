@@ -27,7 +27,6 @@ Mods needing attention (`!`, `⚠`, not in manifest) come first, then the rest a
 | Mod | Server | Headless 1 | Headless 2 | tarmantria | tariognatha |
 |---|---|---|---|---|---|
 | ManimalTerminal | 0.2.20 | 0.2.20 | 0.2.20 | ! | ? |
-| PrestigeTweaks | ! | - | - | - | ? |
 | RUAFComeHome | 1.2.1 | 1.2.1 | 1.2.1 | ! | ? |
 | 7Bpencil.BrighterInteriors | - | - | - | 1.1.1 | ? |
 | Acid's Bot Placement System | 2.1.0 | 2.1.0 | 2.1.0 | 2.1.0 | ? |
@@ -114,6 +113,7 @@ Mods needing attention (`!`, `⚠`, not in manifest) come first, then the rest a
 | PlayerEncumbranceBar | - | - | - | 1.3.0 | ? |
 | PrestigeDogtagFix | 1.0.0 | - | - | - | ? |
 | PrestigeTransferFilledContainers | - | - | - | 1.0.0 @67a3e11 | ? |
+| PrestigeTweaks | 1.0.0 | - | - | - | ? |
 | QuestCodex | 1.11.1 | - | - | - | ? |
 | QuickSellFlea | - | - | - | 1.4.5 | ? |
 | QuietWeather | - | - | - | 1.0.1 | ? |
@@ -157,7 +157,6 @@ Mods needing attention (`!`, `⚠`, not in manifest) come first, then the rest a
 ## Attention
 
 - `!` missing: ManimalTerminal on tarmantria
-- `!` missing: PrestigeTweaks on Server
 - `!` missing: RUAFComeHome on tarmantria
 
 ## Pending archives and backups

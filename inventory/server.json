@@ -337,6 +337,15 @@
     },
     {
       "kind": "server",
+      "key": "krane-PrestigeTweaks4Server",
+      "path": "krane-PrestigeTweaks4Server/krane.PrestigeTweaks4Server.dll",
+      "name": "Prestige Tweaks",
+      "guid": "krane.prestigetweaks4server",
+      "version": "1.0.0",
+      "link": null
+    },
+    {
+      "kind": "server",
       "key": "krane-StorylineCleanup4Server",
       "path": "krane-StorylineCleanup4Server/krane.StorylineCleanup4Server.dll",
       "name": "Storyline Cleanup",
