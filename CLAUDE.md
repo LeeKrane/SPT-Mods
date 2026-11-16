@@ -15,7 +15,7 @@ NEVER restart anything yourself (server, headless clients, services, game). Only
 Never copy a built DLL into the plugin path. Symlink it, so a rebuild goes live without a copy step:
 
 ```
-ln -s ~/development/spt-fixes/<Name>/out/krane.<Name>.dll ~/Games/spt/drive_c/SPT/BepInEx/plugins/krane.<Name>.dll
+ln -s ~/Games/spt-fixes/<Name>/out/krane.<Name>.dll ~/Games/spt/drive_c/SPT/BepInEx/plugins/krane.<Name>.dll
 ```
 
 Every plugin has a concise `<Name>/README.md` covering: requirements (SPT/Fika versions, other mods, hard or soft dependency), what it does, why it exists, and a settings table (section / key, default, effect). Write it when creating a plugin. Update it in the same change whenever behavior, dependencies or config entries change.
