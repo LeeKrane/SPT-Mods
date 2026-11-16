@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Restart every SPT unit on taragarmr that is enabled (starts on boot): the main server (6969)
-# while it is active, the Vagabond server (6970) and both Fika headless clients, which host the
-# Vagabond server's raids. A disabled server (systemctl --user disable) is left alone. The
-# headless units wait for their server's port, so this returns once all are up.
+# and both Fika headless clients, which host its raids. A disabled unit (systemctl --user
+# disable) is left alone. The headless units wait for the server's port, so this returns once
+# all are up.
 set -euo pipefail
 
 host=${SPT_HOST:-taragarmr}
-all=(spt-server spt-server-vagabond spt-headless spt-headless-2)
+all=(spt-server spt-headless spt-headless-2)
 
 units=()
 for u in "${all[@]}"; do

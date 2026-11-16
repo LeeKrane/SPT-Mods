@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Push a built server mod (<Name>/out/) to taragarmr's SPT mods dir as krane-<Name>. Builds and
-# restarts nothing (run scripts/restart-all.sh after). SPT_SERVER_DIR=spt-server-vagabond
-# targets the Vagabond server instead of the main one. The remote config.json is never overwritten;
+# restarts nothing (run scripts/restart-all.sh after). SPT_SERVER_DIR overrides the remote
+# server dir (default spt-server). The remote config.json is never overwritten;
 # the built one is copied only if absent. A remote state/ dir (data a mod saves at runtime) is kept.
 set -euo pipefail
 

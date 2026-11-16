@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Stop the main SPT server (6969). It no longer starts on boot (disabled while both headless
-# clients host Vagabond raids); `systemctl --user enable --now spt-server` brings it back.
+# Stop the main SPT server (6969) on taragarmr. The headless clients require it, so systemd
+# stops them too. Boot still starts it.
 set -euo pipefail
 
 host=${SPT_HOST:-taragarmr}
